@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教室座位神管理系統</title> <!-- Version bump -->
+    <title>教室座位神管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -27,13 +27,12 @@
         .mode-traditional .empty-seat { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; cursor: grab; }
         #seatingChart.mode-group {
             display: flex;
-            flex-wrap: wrap; /* Standard wrap */
+            flex-wrap: wrap; 
             gap: 12px;
             justify-content: center;
             padding: 10px;
             align-items: flex-start;
         }
-        /* Removed perspective-student specific flex-wrap rule */
         .group-container { position: relative; border: 2px dashed #a1a1aa; padding: 5px; padding-top: 28px; border-radius: 0.5rem; display: grid; grid-template-columns: repeat(2, auto); gap: 2px; background-color: rgba(241, 245, 249, 0.6); align-content: start; min-height: 100px; cursor: move; width: fit-content; height: fit-content; margin: 5px; transition: box-shadow 0.2s ease; }
         .group-container.sortable-chosen { border-style: solid !important; border-color: #60a5fa !important; box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important; cursor: grabbing !important; }
         .group-container.sortable-ghost { opacity: 0.5 !important; background-color: #e0f2fe !important; border: 2px solid #3b82f6 !important; }
@@ -56,11 +55,7 @@
         .male .gender-symbol { color: #3b82f6; }
         .female .gender-symbol { color: #ec4899; }
         .needs-icon { position: absolute; top: 3px; right: 3px; font-size: 0.75rem; color: #64748b; background-color: rgba(255, 255, 255, 0.7); padding: 1px 2px; border-radius: 3px; z-index: 15; cursor: help; }
-        .tooltip {
-            visibility: hidden; width: max-content; max-width: 140px; background-color: #334155; color: #fff; text-align: center; border-radius: 4px; padding: 4px 7px; position: absolute;
-            z-index: 99; /* Increased z-index */
-            bottom: 105%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 0.7rem; white-space: normal; word-wrap: break-word; pointer-events: none;
-        }
+        .tooltip { visibility: hidden; width: max-content; max-width: 140px; background-color: #334155; color: #fff; text-align: center; border-radius: 4px; padding: 4px 7px; position: absolute; z-index: 99; bottom: 105%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 0.7rem; white-space: normal; word-wrap: break-word; pointer-events: none; }
         .needs-icon:hover .tooltip { visibility: visible; opacity: 1; }
         .student-info { display: flex; flex-direction: column; align-items: center; width: 100%; text-align: center; }
         .student-name-line { font-semibold text-gray-800 truncate; width: 100%; margin-bottom: 1px;}
@@ -70,14 +65,49 @@
         .controls-section .grid { margin-bottom: 1rem; }
         @media (min-width: 1024px) { #controls-column { max-height: calc(100vh - 70px - 50px); overflow-y: auto; scrollbar-width: thin; } }
 
-        /* Print Styles */
+        /* --- NEW: Mascot Styles --- */
+        #mascot {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: auto;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 999;
+        }
+        #mascot:hover {
+            transform: scale(1.15) rotate(-8deg);
+            animation: mascot-shake 0.5s infinite alternate;
+        }
+        .particle {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1001; /* Above other elements */
+            transition: transform 1s ease-out, opacity 1s ease-out;
+        }
+        @keyframes mascot-shake {
+            0% { transform: scale(1.15) rotate(-8deg); }
+            100% { transform: scale(1.15) rotate(8deg); }
+        }
+        @media (max-width: 768px) {
+            #mascot {
+                width: 80px;
+                bottom: 15px;
+                left: 15px;
+            }
+        }
+
         @media print {
             .no-print { display: none !important; }
             body { background-color: white; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             #preview-column { grid-column: span 3 / span 3 !important; }
             #classroomLayout { padding: 0; margin: 0; box-shadow: none; border: none; background-color: white !important; }
             #seatingChartWrapper { overflow: visible !important; }
-            #seatingChart { gap: 2px !important; background-color: white !important; box-shadow: none !important; flex-wrap: wrap !important; /* Ensure standard wrap for print */ }
+            #seatingChart { gap: 2px !important; background-color: white !important; box-shadow: none !important; flex-wrap: wrap !important; }
             .desk { break-inside: avoid; box-shadow: none !important; border: 1px solid #666 !important; min-height: 55px !important; width: 75px !important; margin: 1px !important; padding: 0.2rem !important; font-size: 0.65rem !important; overflow: hidden !important; background-color: white !important; }
             .classroom-object { border: 1px solid #000 !important; height: 30px !important; background-color: #ccc !important; color: #000 !important;}
             .blackboard { height: 40px !important; }
@@ -92,7 +122,6 @@
             #printClassName { display: block !important; text-align: center; font-size: 1.5em; font-weight: bold; margin-bottom: 1em; }
             #webClassName { display: none !important; }
             .student-name-line { font-size: 0.8rem; }
-
             .print-hide-needs .desk-needs-print { display: none !important; }
             .print-hide-empty .empty-seat { visibility: hidden !important; border-color: transparent !important; background-color: transparent !important; }
             .print-hide-empty .group-container.print-empty-group { display: none !important; }
@@ -107,14 +136,13 @@
 <body class="text-gray-800 min-h-screen flex flex-col">
     <header class="bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-5 shadow-lg no-print">
         <div class="container mx-auto px-4">
-            <h1 class="text-2xl md:text-3xl font-bold text-center">教室座位神管理系統</h1> <!-- Version bump -->
+            <h1 class="text-2xl md:text-3xl font-bold text-center">教室座位神管理系統</h1>
             <p class="text-center mt-1 text-blue-100 text-sm">靈活神安排*視覺神管理</p>
         </div>
     </header>
 
     <main class="container mx-auto px-2 md:px-4 py-4 print-container flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div id="controls-column" class="lg:col-span-1 space-y-6 no-print">
-            <!-- Basic Settings -->
             <div class="bg-white rounded-lg shadow-md controls-section">
                 <h2 class="text-lg font-bold text-gray-800">基本設定</h2>
                 <div class="mb-4">
@@ -141,7 +169,6 @@
                 </div>
             </div>
 
-            <!-- Student List -->
             <div class="bg-white rounded-lg shadow-md controls-section">
                  <h2 class="text-lg font-bold text-gray-800">學生名單與匯入</h2>
                  <div class="grid grid-cols-1 gap-4">
@@ -168,7 +195,6 @@
                 </div>
             </div>
 
-            <!-- Display & Operation Settings -->
             <div class="bg-white rounded-lg shadow-md controls-section">
                 <h2 class="text-lg font-bold text-gray-800">顯示與操作設定</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -201,7 +227,6 @@
             </div>
         </div>
 
-        <!-- Preview Column -->
         <div id="preview-column" class="lg:col-span-2">
              <div id="classroomLayout" class="bg-gray-100 rounded-lg shadow-inner p-2 md:p-4 classroom-layout relative overflow-x-auto h-full flex flex-col">
                  <h3 id="printClassName" class="text-center text-xl font-bold mb-4 hidden"></h3>
@@ -237,24 +262,23 @@
     </main>
     <footer class="bg-gray-800 text-white py-3 no-print mt-auto">
         <div class="container mx-auto px-4 text-center text-xs">
-            <p>Copyright © Liyuchiutiger Gongminshen</p> <!-- Version bump -->
+            <p>Copyright © Liyuchiutiger Gongminshen</p>
         </div>
     </footer>
 
+    <!-- NEW: Mascot Element -->
+    <img id="mascot" src="image/LiyuChillGuy.svg" alt="LiyuChillGuy Mascot" class="no-print">
+
     <script>
-        /**
-         * @class ClassroomSeatingManager
-         * Manages the classroom seating arrangement application logic and UI interactions.
-         * v2.4 Changes: Correct group mode perspective switching via JS DOM manipulation.
-         */
+        // ... (The entire ClassroomSeatingManager class and initialization logic remains here, unchanged from the version you provided)
         class ClassroomSeatingManager {
             constructor() {
                 this.state = {
-                    students: [], // Array of {id, number, name, gender, needs}
-                    layoutMap: new Map(), // Map<deskId, studentObject>
-                    groupNames: {}, // Map<groupKey, groupNameString>
+                    students: [],
+                    layoutMap: new Map(),
+                    groupNames: {},
                     seatingMode: 'traditional',
-                    viewPerspective: 'teacher', // 'teacher' or 'student'
+                    viewPerspective: 'teacher',
                     showBlackboard: false,
                     showTeacherDesk: false,
                     dragMode: 'insert',
@@ -279,11 +303,10 @@
             }
 
             getDOMElements() {
-                // ... (same as v2.3) ...
                 return {
                     sequentialArrangeBtn: document.getElementById('sequentialArrangeBtn'),
                     randomizeBtn: document.getElementById('randomizeBtn'),
-                    refreshStudentListBtn: document.getElementById('refreshStudentListBtn'), // Added
+                    refreshStudentListBtn: document.getElementById('refreshStudentListBtn'),
                     printBtn: document.getElementById('printBtn'),
                     downloadTemplateBtn: document.getElementById('downloadTemplateBtn'),
                     importExcelBtn: document.getElementById('importExcelBtn'),
@@ -324,10 +347,9 @@
             }
 
             bindEventListeners() {
-                // ... (same as v2.3) ...
                 this.elements.sequentialArrangeBtn.addEventListener('click', () => this.arrangeSeats(false));
                 this.elements.randomizeBtn.addEventListener('click', () => this.arrangeSeats(true));
-                this.elements.refreshStudentListBtn.addEventListener('click', () => this.refreshStudentDataAndUpdateDesks()); // Added
+                this.elements.refreshStudentListBtn.addEventListener('click', () => this.refreshStudentDataAndUpdateDesks());
                 this.elements.downloadTemplateBtn.addEventListener('click', (e) => this.generateExcelTemplate(e));
                 this.elements.importExcelBtn.addEventListener('click', () => this.importStudentsFromExcel());
                 this.elements.exportLayoutBtn.addEventListener('click', () => this.exportSeatingLayout());
@@ -365,30 +387,23 @@
             }
 
             initialize() {
-                console.log("Initializing ClassroomSeatingManager v2.4...");
-                // ... (same as v2.3) ...
                 this.elements.studentsTextarea.value = '';
                 this.updateConditionalInputs();
                 this.updateUIState();
                 this.updatePrintOptionCheckboxes();
                 this.setupPrintListener();
-                this.arrangeSeats(); // Initial empty render
-                console.log("Initialization complete.");
+                this.arrangeSeats();
             }
 
             handleModeChange(newMode) {
-                // ... (same as v2.3) ...
                 if (this.state.seatingMode !== newMode) {
-                    console.log(`Mode changing from ${this.state.seatingMode} to ${newMode}`);
                     this.state.seatingMode = newMode;
                     this.updateConditionalInputs();
-                    // Reset layout map and groups when changing mode
                     this.arrangeSeats();
                 }
             }
 
             updateConfigFromInputsAndRender() {
-                // ... (same as v2.3) ...
                 this.state.rows = Math.max(1, parseInt(this.elements.rowsInput.value) || 1);
                 this.state.cols = Math.max(1, parseInt(this.elements.colsInput.value) || 1);
                 this.state.numGroups = Math.max(0, parseInt(this.elements.numGroupsInput.value) || 0);
@@ -397,20 +412,16 @@
                 this.elements.colsInput.value = this.state.cols;
                 this.elements.numGroupsInput.value = this.state.numGroups;
                 this.elements.studentsPerGroupInput.value = this.state.studentsPerGroup;
-                console.log("Config updated, re-arranging seats.");
-                // Re-arrange clears existing placement and applies new config
                 this.arrangeSeats();
             }
 
             updateClassName() {
-                // ... (same as v2.3) ...
                 this.state.className = this.elements.classNameInput.value.trim();
                 this.elements.webClassName.textContent = this.state.className;
                 this.elements.printClassName.textContent = this.state.className || '座位表';
             }
 
             updateConditionalInputs() {
-                // ... (same as v2.3) ...
                 const isTraditional = this.state.seatingMode === 'traditional';
                 this.elements.traditionalInputsDiv.classList.toggle('hidden', !isTraditional);
                 this.elements.groupInputsDiv.classList.toggle('hidden', isTraditional);
@@ -421,188 +432,121 @@
             }
 
             parseStudents(text) {
-                // ... (same as v2.3) ...
                 const generateUniqueId = () => `s_${Date.now()}_${Math.random().toString(16).slice(2)}`;
                 const students = [];
-                const seenNumbers = new Set(); // Track numbers to detect duplicates
-
-                text.split('\n')
-                    .map(l => l.trim()).filter(l => l)
-                    .forEach((line) => {
-                        const parts = line.split(/\s+/);
-                        if (parts.length < 3) return; // Need at least Number, Name, Gender
-
-                        const number = parts[0].trim();
-                        const name = parts[1].trim();
-                        const genderInput = parts[2].toLowerCase();
-                        const needs = parts.length >= 4 ? parts.slice(3).join(' ').trim() : null;
-
-                        let gender = '未知';
-                        if (['男', 'm', 'male'].includes(genderInput)) gender = '男';
-                        else if (['女', 'f', 'female'].includes(genderInput)) gender = '女';
-
-                        if (number && seenNumbers.has(number)) {
-                           console.warn(`Duplicate student number "${number}" detected in list. Using first occurrence.`);
-                           return; // Skip duplicate numbers for stability in refresh logic
-                        }
-                        if(number) seenNumbers.add(number);
-
-                        students.push({
-                            id: generateUniqueId(), // Still useful for potential future features
-                            number: number || null, // Store the number explicitly
-                            name: name,
-                            gender: gender,
-                            needs: needs
-                        });
-                    });
-                 return students;
+                const seenNumbers = new Set(); 
+                text.split('\n').map(l => l.trim()).filter(l => l).forEach((line) => {
+                    const parts = line.split(/\s+/);
+                    if (parts.length < 3) return;
+                    const number = parts[0].trim();
+                    const name = parts[1].trim();
+                    const genderInput = parts[2].toLowerCase();
+                    const needs = parts.length >= 4 ? parts.slice(3).join(' ').trim() : null;
+                    let gender = '未知';
+                    if (['男', 'm', 'male'].includes(genderInput)) gender = '男';
+                    else if (['女', 'f', 'female'].includes(genderInput)) gender = '女';
+                    if (number && seenNumbers.has(number)) {
+                       console.warn(`Duplicate student number "${number}" detected in list. Using first occurrence.`);
+                       return;
+                    }
+                    if(number) seenNumbers.add(number);
+                    students.push({ id: generateUniqueId(), number: number || null, name: name, gender: gender, needs: needs });
+                });
+                return students;
             }
 
             arrangeSeats(randomize = false) {
-                // ... (same as v2.3 - full reset logic) ...
-                console.log(`Arrange Seats triggered (Full Reset). Mode: ${this.state.seatingMode}, Randomize: ${randomize}. Resetting groups and layout.`);
                 this.state.students = this.parseStudents(this.elements.studentsTextarea.value);
-
-                // --- RESET Group State & Layout ---
-                this.state.groupNames = {}; // Clear existing names
-                this.nextGroupId = 0;     // Reset index counter
-                this.state.layoutMap.clear(); // Clear previous layout data
-
-                 let initialCapacity = this.state.seatingMode === 'traditional'
-                    ? this.state.rows * this.state.cols
-                    : this.state.numGroups * this.state.studentsPerGroup;
-
-                 let studentsToPlace = [...this.state.students];
-                 if (studentsToPlace.length > initialCapacity && initialCapacity > 0) console.warn(`Student count (${studentsToPlace.length}) > initial capacity (${initialCapacity}).`);
-                 else if (initialCapacity <= 0 && studentsToPlace.length > 0) { console.warn(`Initial capacity <= 0 (${initialCapacity}). Cannot place students.`); studentsToPlace = []; }
-
-                 if (randomize) studentsToPlace = this.shuffleArray(studentsToPlace);
-
-                 let studentIndex = 0;
-
-                 if (this.state.seatingMode === 'traditional') {
+                this.state.groupNames = {};
+                this.nextGroupId = 0;
+                this.state.layoutMap.clear();
+                let initialCapacity = this.state.seatingMode === 'traditional' ? this.state.rows * this.state.cols : this.state.numGroups * this.state.studentsPerGroup;
+                let studentsToPlace = [...this.state.students];
+                if (studentsToPlace.length > initialCapacity && initialCapacity > 0) console.warn(`Student count (${studentsToPlace.length}) > initial capacity (${initialCapacity}).`);
+                else if (initialCapacity <= 0 && studentsToPlace.length > 0) { console.warn(`Initial capacity <= 0 (${initialCapacity}). Cannot place students.`); studentsToPlace = []; }
+                if (randomize) studentsToPlace = this.shuffleArray(studentsToPlace);
+                let studentIndex = 0;
+                if (this.state.seatingMode === 'traditional') {
                      for (let i = 0; i < this.state.rows; i++) {
                         for (let j = 0; j < this.state.cols; j++) {
                             const deskId = `r${i}c${j}`;
-                            if (studentIndex < studentsToPlace.length) {
-                                this.state.layoutMap.set(deskId, studentsToPlace[studentIndex++]);
-                            }
+                            if (studentIndex < studentsToPlace.length) { this.state.layoutMap.set(deskId, studentsToPlace[studentIndex++]); }
                         }
                      }
-                 } else { // Group Mode - Build fresh groups
+                } else {
                      for (let g = 0; g < this.state.numGroups; g++) {
                          const currentGroupIndex = this.nextGroupId++;
                          const groupKey = `g${currentGroupIndex}`;
                          this.state.groupNames[groupKey] = `第 ${currentGroupIndex + 1} 組`;
-
                          for (let s = 0; s < this.state.studentsPerGroup; s++) {
                             const deskId = `${groupKey}d${s}`;
-                            if (studentIndex < studentsToPlace.length) {
-                                this.state.layoutMap.set(deskId, studentsToPlace[studentIndex++]);
-                            }
+                            if (studentIndex < studentsToPlace.length) { this.state.layoutMap.set(deskId, studentsToPlace[studentIndex++]); }
                         }
                      }
                      this.nextGroupId = this.state.numGroups;
-                 }
-                 console.log("Layout map populated:", this.state.layoutMap);
-                 console.log("Group names (reset):", this.state.groupNames);
-                 this.renderSeatingChart();
+                }
+                this.renderSeatingChart();
             }
 
             refreshStudentDataAndUpdateDesks() {
-                // ... (same as v2.3 - in-place update logic) ...
-                console.log("--- Refreshing Student Data & Updating Desks (In-Place) ---");
                 const newStudentsData = this.parseStudents(this.elements.studentsTextarea.value);
                 const newStudentMapByNumber = new Map(newStudentsData.map(s => [s.number, s]));
                 const currentDeskElements = Array.from(this.elements.seatingChart.querySelectorAll('.desk'));
                 const availableEmptyDeskIds = [];
                 const assignedDeskIds = new Set();
-
                 currentDeskElements.forEach(deskElement => {
                     const deskId = deskElement.dataset.deskId;
                     const currentStudentNumber = deskElement.dataset.studentNumber;
-
                     if (currentStudentNumber) {
                         const updatedStudentData = newStudentMapByNumber.get(currentStudentNumber);
                         if (updatedStudentData) {
-                            console.log(`Updating student ${currentStudentNumber} at desk ${deskId}`);
                             this._updateDeskContent(deskElement, updatedStudentData);
                             this.state.layoutMap.set(deskId, updatedStudentData);
                             newStudentMapByNumber.delete(currentStudentNumber);
                             assignedDeskIds.add(deskId);
                         } else {
-                            console.log(`Removing student ${currentStudentNumber} from desk ${deskId}`);
                             this._updateDeskContent(deskElement, null);
                             this.state.layoutMap.delete(deskId);
                             availableEmptyDeskIds.push(deskId);
                             assignedDeskIds.add(deskId);
                         }
                     } else {
-                         if (deskId && !this.state.layoutMap.has(deskId)) { // Ensure deskId is valid before pushing
-                            availableEmptyDeskIds.push(deskId);
-                         } else if (deskId && this.state.layoutMap.has(deskId)) { // If map has entry for empty desk, clean it
-                            console.warn(`Desk ${deskId} has no studentNumber but exists in layoutMap during refresh. Clearing map entry.`);
-                            this.state.layoutMap.delete(deskId);
-                            availableEmptyDeskIds.push(deskId);
-                         } else {
-                            // This desk might lack an ID (e.g., during mid-render error?) - skip
-                            console.warn("Found desk without ID during refresh:", deskElement);
-                         }
+                         if (deskId && !this.state.layoutMap.has(deskId)) { availableEmptyDeskIds.push(deskId); }
+                         else if (deskId && this.state.layoutMap.has(deskId)) { this.state.layoutMap.delete(deskId); availableEmptyDeskIds.push(deskId); }
                     }
                 });
-
                 const studentsToAdd = Array.from(newStudentMapByNumber.values());
-                console.log(`Found ${studentsToAdd.length} new students to place.`);
-                console.log(`Found ${availableEmptyDeskIds.length} available empty desks.`);
-
                 studentsToAdd.forEach(newStudent => {
                     if (availableEmptyDeskIds.length > 0) {
                         const targetDeskId = availableEmptyDeskIds.shift();
                         const targetDeskElement = this.elements.seatingChart.querySelector(`.desk[data-desk-id="${targetDeskId}"]`);
                         if (targetDeskElement) {
-                            console.log(`Placing new student ${newStudent.number || newStudent.name} into empty desk ${targetDeskId}`);
                             this._updateDeskContent(targetDeskElement, newStudent);
                             this.state.layoutMap.set(targetDeskId, newStudent);
                             assignedDeskIds.add(targetDeskId);
-                        } else {
-                            console.warn(`Could not find desk element for empty desk ID ${targetDeskId} while placing new students.`);
-                            // Put the ID back? Or just log the student? Log for now.
-                            console.warn(`Failed to place student:`, newStudent);
                         }
-                    } else {
-                        console.warn(`No more empty desks to place new student ${newStudent.number || newStudent.name}`);
                     }
                 });
-
                 this.state.students = newStudentsData;
                 this.updateClassInfo(currentDeskElements.length, this.state.layoutMap.size);
                 this.updateGenderVisibility();
-                console.log("--- Refresh Student Data Finished ---");
             }
 
             renderSeatingChart() {
-                console.log("--- Rendering Seating Chart --- Mode:", this.state.seatingMode, "Perspective:", this.state.viewPerspective);
-                this.destroySortable(); // Destroy BEFORE manipulating DOM
+                this.destroySortable();
                 const seatingChart = this.elements.seatingChart;
-                seatingChart.innerHTML = ''; // Clear previous content
-                // Apply mode class, perspective class is not needed here anymore
+                seatingChart.innerHTML = '';
                 seatingChart.className = `min-h-[250px] rounded bg-white shadow-sm pb-4 mode-${this.state.seatingMode}`;
-
                 let totalSlots = 0;
                 if (this.state.seatingMode === 'traditional') {
                     totalSlots = this.renderTraditionalLayoutStructure();
                 } else {
-                    totalSlots = this.renderGroupLayoutStructure(); // Renders structure AND handles perspective internally
+                    totalSlots = this.renderGroupLayoutStructure();
                 }
-
-                // Populate desks based on the current layoutMap
                 this.populateDesksFromMap();
-
                 this.updateClassInfo(totalSlots, this.state.layoutMap.size);
-                this.renderClassroomObjects(); // Render blackboard/desk based on perspective
+                this.renderClassroomObjects();
                 this.updateClassName();
-
-                // Initialize sortable AFTER elements are in the DOM and populated
                 if (this.state.seatingMode === 'traditional') {
                     this.initSortableForTraditional();
                 } else {
@@ -610,7 +554,6 @@
                     this.initSortableForGroupContainers();
                 }
                 this.updateGenderVisibility();
-                console.log("--- Seating Chart Render Finished ---");
             }
 
             renderTraditionalLayoutStructure() {
@@ -618,507 +561,252 @@
                 chart.style.display = 'grid';
                 chart.style.gridTemplateColumns = `repeat(${this.state.cols}, minmax(var(--desk-width), auto))`;
                 chart.style.gap = '6px'; chart.style.padding = '5px';
-
-                const rowIndices = this.state.viewPerspective === 'teacher'
-                    ? Array.from({ length: this.state.rows }, (_, i) => i)
-                    : Array.from({ length: this.state.rows }, (_, i) => this.state.rows - 1 - i);
-                const colIndices = this.state.viewPerspective === 'teacher'
-                    ? Array.from({ length: this.state.cols }, (_, j) => j)
-                    : Array.from({ length: this.state.cols }, (_, j) => this.state.cols - 1 - j);
-
+                const rowIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: this.state.rows }, (_, i) => i) : Array.from({ length: this.state.rows }, (_, i) => this.state.rows - 1 - i);
+                const colIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: this.state.cols }, (_, j) => j) : Array.from({ length: this.state.cols }, (_, j) => this.state.cols - 1 - j);
                 let deskCount = 0;
                 for (const i of rowIndices) {
                     for (const j of colIndices) {
                         const seatId = `r${i}c${j}`;
-                        chart.appendChild(this.createDeskElement(seatId, null)); // Create empty
+                        chart.appendChild(this.createDeskElement(seatId, null));
                         deskCount++;
                     }
                 }
                 return deskCount;
             }
 
-             // Renders group structure, handling perspective reversal internally
-             renderGroupLayoutStructure() {
+            renderGroupLayoutStructure() {
                 const chart = this.elements.seatingChart;
-                // Set base flex styles (no perspective-specific CSS needed now)
-                chart.style.display = 'flex'; chart.style.flexWrap = 'wrap';
-                chart.style.justifyContent = 'center'; chart.style.alignItems = 'flex-start';
-                chart.style.gap = '12px'; chart.style.padding = '10px';
-                chart.style.gridTemplateColumns = ''; // Clear grid styles
-
+                chart.style.display = 'flex'; chart.style.flexWrap = 'wrap'; chart.style.justifyContent = 'center'; chart.style.alignItems = 'flex-start'; chart.style.gap = '12px'; chart.style.padding = '10px'; chart.style.gridTemplateColumns = '';
                 let groupIndicesToRender = this.getGroupIndicesToRender();
-                console.log("Group indices to render:", groupIndicesToRender);
-
-                const groupContainerElements = []; // Store prepared group containers
+                const groupContainerElements = [];
                 let totalRenderedDesks = 0;
-
-                // Step 1: Create all group containers and their desks IN LOGICAL ORDER
                 groupIndicesToRender.forEach(gIndex => {
                     const groupKey = `g${gIndex}`;
                     const groupContainer = this.createGroupContainerElement(groupKey);
-
-                    const existingDeskIds = Array.from(this.state.layoutMap.keys())
-                                              .filter(id => id.startsWith(`${groupKey}d`));
+                    const existingDeskIds = Array.from(this.state.layoutMap.keys()).filter(id => id.startsWith(`${groupKey}d`));
                     let maxExistingDeskIndex = -1;
-                    existingDeskIds.forEach(deskId => {
-                         const match = deskId.match(/d(\d+)$/);
-                         if (match && match[1]) maxExistingDeskIndex = Math.max(maxExistingDeskIndex, parseInt(match[1]));
-                     });
+                    existingDeskIds.forEach(deskId => { const match = deskId.match(/d(\d+)$/); if (match && match[1]) maxExistingDeskIndex = Math.max(maxExistingDeskIndex, parseInt(match[1])); });
                     const targetSlots = Math.max(1, this.state.studentsPerGroup, maxExistingDeskIndex + 1);
-
-                    const deskElements = []; // Store desks for this group
+                    const deskElements = [];
                     for (let s_logical = 0; s_logical < targetSlots; s_logical++) {
                        const deskId = `${groupKey}d${s_logical}`;
-                       deskElements.push(this.createDeskElement(deskId, null)); // Create empty
+                       deskElements.push(this.createDeskElement(deskId, null));
                        totalRenderedDesks++;
                     }
-
-                    // Step 2: Reverse desk order WITHIN the group if student perspective
-                    if (this.state.viewPerspective === 'student') {
-                        deskElements.reverse(); // Reverse the desks array itself
-                    }
-
-                    // Step 3: Append the (potentially reversed) desks to this group container
+                    if (this.state.viewPerspective === 'student') { deskElements.reverse(); }
                     deskElements.forEach(deskEl => groupContainer.appendChild(deskEl));
-
-                    // Step 4: Add the prepared group container to our temporary array
                     groupContainerElements.push(groupContainer);
-                 });
-
-                 // Step 5: Reverse the ORDER OF GROUPS if student perspective
-                 const finalGroupOrder = this.state.viewPerspective === 'student'
-                     ? groupContainerElements.reverse() // Reverse the array of containers
-                     : groupContainerElements;
-
-                 // Step 6: Append the groups in the final determined order to the chart
-                 finalGroupOrder.forEach(groupEl => chart.appendChild(groupEl));
-
-                 console.log(`Rendered group structure. Perspective: ${this.state.viewPerspective}. Group order reversed: ${this.state.viewPerspective === 'student'}. Desk order reversed: ${this.state.viewPerspective === 'student'}.`);
-                 return totalRenderedDesks;
+                });
+                const finalGroupOrder = this.state.viewPerspective === 'student' ? groupContainerElements.reverse() : groupContainerElements;
+                finalGroupOrder.forEach(groupEl => chart.appendChild(groupEl));
+                return totalRenderedDesks;
             }
 
-
             populateDesksFromMap() {
-                // ... (same as v2.3) ...
                 this.state.layoutMap.forEach((student, deskId) => {
                     const deskElement = this.elements.seatingChart.querySelector(`.desk[data-desk-id="${deskId}"]`);
-                    if (deskElement) {
-                        this._updateDeskContent(deskElement, student);
-                    } else {
-                        console.warn(`Desk element not found for ID ${deskId} during population.`);
-                    }
+                    if (deskElement) { this._updateDeskContent(deskElement, student); }
                 });
             }
 
-            calculateDeskSlots() {
-                // ... (same as v2.3) ...
-                 return this.elements.seatingChart.querySelectorAll('.desk').length;
-            }
-
             getGroupIndicesToRender() {
-                // ... (same as v2.3) ...
                  const groupIndicesInMap = new Set();
-                 this.state.layoutMap.forEach((_, key) => {
-                    if (key.startsWith('g')) {
-                        const match = key.match(/^g(\d+)/);
-                        if (match && match[1]) groupIndicesInMap.add(parseInt(match[1]));
-                    }
-                 });
-                 Object.keys(this.state.groupNames).forEach(groupKey => {
-                    const match = groupKey.match(/^g(\d+)$/);
-                    if (match && match[1]) groupIndicesInMap.add(parseInt(match[1]));
-                 });
+                 this.state.layoutMap.forEach((_, key) => { if (key.startsWith('g')) { const match = key.match(/^g(\d+)/); if (match && match[1]) groupIndicesInMap.add(parseInt(match[1])); } });
+                 Object.keys(this.state.groupNames).forEach(groupKey => { const match = groupKey.match(/^g(\d+)$/); if (match && match[1]) groupIndicesInMap.add(parseInt(match[1])); });
                  const maxConfigGroupIndex = this.state.seatingMode === 'group' ? Math.max(0, this.state.numGroups - 1, this.nextGroupId - 1) : -1;
-                 if (maxConfigGroupIndex >= 0) {
-                     for(let i = 0; i <= maxConfigGroupIndex; i++) {
-                        if(this.state.groupNames[`g${i}`] !== undefined || i < this.state.numGroups) {
-                            groupIndicesInMap.add(i);
-                        }
-                     }
-                 }
+                 if (maxConfigGroupIndex >= 0) { for(let i = 0; i <= maxConfigGroupIndex; i++) { if(this.state.groupNames[`g${i}`] !== undefined || i < this.state.numGroups) { groupIndicesInMap.add(i); } } }
                  const highestIndex = groupIndicesInMap.size > 0 ? Math.max(...Array.from(groupIndicesInMap)) : -1;
                  this.nextGroupId = Math.max(this.nextGroupId, highestIndex + 1);
                  return Array.from(groupIndicesInMap).sort((a, b) => a - b);
             }
 
             createGroupContainerElement(groupKey) {
-                // ... (same as v2.3) ...
                  const groupIndex = parseInt(groupKey.substring(1));
                  const groupContainer = document.createElement('div');
                  groupContainer.className = 'group-container';
                  groupContainer.dataset.groupKey = groupKey;
                  groupContainer.style.borderColor = this.getGroupColor(groupIndex);
-
-                 const nameContainer = document.createElement('div');
-                 nameContainer.className = 'group-name-container';
-
-                 const nameDisplay = document.createElement('span');
-                 nameDisplay.className = 'group-name-display';
-                 if (this.state.groupNames[groupKey] === undefined) {
-                    this.state.groupNames[groupKey] = `第 ${groupIndex + 1} 組`;
-                 }
-                 const currentName = this.state.groupNames[groupKey];
-                 nameDisplay.textContent = currentName;
-                 nameDisplay.title = `點擊編輯${currentName ? ` "${currentName}"` : '小組名稱'}`;
-
-                 const nameInput = document.createElement('input');
-                 nameInput.type = 'text';
-                 nameInput.className = 'group-name-input';
-                 nameInput.value = currentName;
-                 nameInput.maxLength = 30;
-                 nameInput.spellcheck = false;
+                 const nameContainer = document.createElement('div'); nameContainer.className = 'group-name-container';
+                 const nameDisplay = document.createElement('span'); nameDisplay.className = 'group-name-display';
+                 if (this.state.groupNames[groupKey] === undefined) { this.state.groupNames[groupKey] = `第 ${groupIndex + 1} 組`; }
+                 const currentName = this.state.groupNames[groupKey]; nameDisplay.textContent = currentName; nameDisplay.title = `點擊編輯${currentName ? ` "${currentName}"` : '小組名稱'}`;
+                 const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'group-name-input'; nameInput.value = currentName; nameInput.maxLength = 30; nameInput.spellcheck = false;
                  nameInput.addEventListener('blur', (e) => this.handleGroupNameEditEnd(e.target));
-                 nameInput.addEventListener('keydown', (e) => {
-                     if (e.key === 'Enter') e.target.blur();
-                     else if (e.key === 'Escape') {
-                        const groupKeyFromInput = e.target.closest('.group-container')?.dataset.groupKey;
-                        if(groupKeyFromInput) {
-                             const originalName = this.state.groupNames[groupKeyFromInput] ?? `第 ${parseInt(groupKeyFromInput.substring(1)) + 1} 組`;
-                             e.target.value = originalName;
-                        }
-                         e.target.blur();
-                     }
-                 });
-
-                 nameContainer.appendChild(nameDisplay);
-                 nameContainer.appendChild(nameInput);
+                 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); else if (e.key === 'Escape') { const groupKeyFromInput = e.target.closest('.group-container')?.dataset.groupKey; if(groupKeyFromInput) { const originalName = this.state.groupNames[groupKeyFromInput] ?? `第 ${parseInt(groupKeyFromInput.substring(1)) + 1} 組`; e.target.value = originalName; } e.target.blur(); } });
+                 nameContainer.appendChild(nameDisplay); nameContainer.appendChild(nameInput);
                  groupContainer.appendChild(nameContainer);
                  groupContainer.appendChild(this.createDeleteGroupButton());
                  return groupContainer;
             }
-            handleGroupNameEditStart(nameDisplayElement) { /* ... same ... */ const nameInput = nameDisplayElement.nextElementSibling; if (!nameInput) return; nameDisplayElement.classList.add('editing'); nameInput.classList.add('editing'); nameInput.select(); nameInput.focus(); }
-            handleGroupNameEditEnd(nameInputElement) { /* ... same ... */ const nameDisplay = nameInputElement.previousElementSibling; const groupContainer = nameInputElement.closest('.group-container'); if (!nameDisplay || !groupContainer) return; const groupKey = groupContainer.dataset.groupKey; const newName = nameInputElement.value.trim(); this.state.groupNames[groupKey] = newName; nameDisplay.textContent = newName; nameDisplay.title = `點擊編輯${newName ? ` "${newName}"` : '小組名稱'}`; nameInputElement.classList.remove('editing'); nameDisplay.classList.remove('editing'); console.log(`Group ${groupKey} name updated to: "${newName}"`); }
-            getGroupColor(index) { /* ... same ... */ const colors = ['#fca5a5','#fdba74','#fde047','#86efac','#93c5fd','#d8b4fe','#f9a8d4','#a7f3d0','#fbcfe8','#bfdbfe', '#a5f3fc', '#bbf7d0', '#fef08a', '#fed7aa', '#fecaca']; return colors[index % colors.length]; }
-            createDeleteGroupButton() { /* ... same ... */ const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-group-btn no-print'; deleteBtn.innerHTML = '<i class="fas fa-trash-alt fa-xs pointer-events-none"></i>'; deleteBtn.title = '刪除此小組 (直接刪除)'; return deleteBtn; }
-            createDeleteSeatButton() { /* ... same ... */ const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-seat-btn no-print'; deleteBtn.innerHTML = '×'; deleteBtn.title = '刪除此空位 (直接刪除)'; return deleteBtn; }
+
+            handleGroupNameEditStart(nameDisplayElement) { const nameInput = nameDisplayElement.nextElementSibling; if (!nameInput) return; nameDisplayElement.classList.add('editing'); nameInput.classList.add('editing'); nameInput.select(); nameInput.focus(); }
+            handleGroupNameEditEnd(nameInputElement) { const nameDisplay = nameInputElement.previousElementSibling; const groupContainer = nameInputElement.closest('.group-container'); if (!nameDisplay || !groupContainer) return; const groupKey = groupContainer.dataset.groupKey; const newName = nameInputElement.value.trim(); this.state.groupNames[groupKey] = newName; nameDisplay.textContent = newName; nameDisplay.title = `點擊編輯${newName ? ` "${newName}"` : '小組名稱'}`; nameInputElement.classList.remove('editing'); nameDisplay.classList.remove('editing'); }
+            getGroupColor(index) { const colors = ['#fca5a5','#fdba74','#fde047','#86efac','#93c5fd','#d8b4fe','#f9a8d4','#a7f3d0','#fbcfe8','#bfdbfe', '#a5f3fc', '#bbf7d0', '#fef08a', '#fed7aa', '#fecaca']; return colors[index % colors.length]; }
+            createDeleteGroupButton() { const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-group-btn no-print'; deleteBtn.innerHTML = '<i class="fas fa-trash-alt fa-xs pointer-events-none"></i>'; deleteBtn.title = '刪除此小組 (直接刪除)'; return deleteBtn; }
+            createDeleteSeatButton() { const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-seat-btn no-print'; deleteBtn.innerHTML = '×'; deleteBtn.title = '刪除此空位 (直接刪除)'; return deleteBtn; }
 
             _updateDeskContent(deskElement, student) {
-                // ... (same as v2.3) ...
-                 deskElement.innerHTML = '';
-                 deskElement.classList.remove('empty-seat', 'male', 'female');
-                 delete deskElement.dataset.studentId;
-                 delete deskElement.dataset.studentNumber;
-                 deskElement.draggable = true;
-                 deskElement.style.cursor = 'grab';
-
+                 deskElement.innerHTML = ''; deskElement.classList.remove('empty-seat', 'male', 'female'); delete deskElement.dataset.studentId; delete deskElement.dataset.studentNumber; deskElement.draggable = true; deskElement.style.cursor = 'grab';
                  if (student && student.name) {
-                     deskElement.dataset.studentId = student.id;
-                     if(student.number) deskElement.dataset.studentNumber = student.number;
-
+                     deskElement.dataset.studentId = student.id; if(student.number) deskElement.dataset.studentNumber = student.number;
                      const genderClass = student.gender === '男' ? 'male' : student.gender === '女' ? 'female' : '';
                      const genderSymbol = student.gender === '男' ? '♂' : student.gender === '女' ? '♀' : '';
                      if (genderClass) deskElement.classList.add(genderClass);
-
-                     const infoDiv = document.createElement('div');
-                     infoDiv.className = 'student-info w-full text-center text-[11px] leading-tight';
-
-                     const nameLine = document.createElement('div');
-                     nameLine.className = 'student-name-line font-semibold text-gray-800 truncate';
+                     const infoDiv = document.createElement('div'); infoDiv.className = 'student-info w-full text-center text-[11px] leading-tight';
+                     const nameLine = document.createElement('div'); nameLine.className = 'student-name-line font-semibold text-gray-800 truncate';
                      const studentDisplayText = `${student.number || '?'} ${student.name}`;
                      nameLine.title = `${studentDisplayText}${student.needs ? ` (${student.needs})` : ''}`;
                      nameLine.innerHTML = `${studentDisplayText} <span class="gender-symbol">${genderSymbol}</span>`;
                      infoDiv.appendChild(nameLine);
-
-                     const needsPrintDiv = document.createElement('div');
-                     needsPrintDiv.className = 'desk-needs-print';
-                     needsPrintDiv.textContent = student.needs || '';
-                     infoDiv.appendChild(needsPrintDiv);
-
+                     const needsPrintDiv = document.createElement('div'); needsPrintDiv.className = 'desk-needs-print'; needsPrintDiv.textContent = student.needs || ''; infoDiv.appendChild(needsPrintDiv);
                      deskElement.appendChild(infoDiv);
-
-                     if (student.needs) {
-                         const needsIconSpan = document.createElement('span');
-                         needsIconSpan.className = 'needs-icon';
-                         needsIconSpan.innerHTML = `<i class="fas ${this.getNeedsIcon(student.needs)}"></i><span class="tooltip">${student.needs}</span>`;
-                         deskElement.appendChild(needsIconSpan);
-                     }
+                     if (student.needs) { const needsIconSpan = document.createElement('span'); needsIconSpan.className = 'needs-icon'; needsIconSpan.innerHTML = `<i class="fas ${this.getNeedsIcon(student.needs)}"></i><span class="tooltip">${student.needs}</span>`; deskElement.appendChild(needsIconSpan); }
                  } else {
-                     deskElement.classList.add('empty-seat');
-                     deskElement.style.cursor = 'grab';
-                     const emptyText = document.createElement('div');
-                     emptyText.className = 'text-gray-400 text-[10px]';
-                     emptyText.textContent = '空位';
-                     deskElement.appendChild(emptyText);
-
-                     if (this.state.seatingMode === 'group') {
-                         deskElement.appendChild(this.createDeleteSeatButton());
-                     }
-                     delete deskElement.dataset.studentId;
-                     delete deskElement.dataset.studentNumber;
+                     deskElement.classList.add('empty-seat'); deskElement.style.cursor = 'grab';
+                     const emptyText = document.createElement('div'); emptyText.className = 'text-gray-400 text-[10px]'; emptyText.textContent = '空位'; deskElement.appendChild(emptyText);
+                     if (this.state.seatingMode === 'group') { deskElement.appendChild(this.createDeleteSeatButton()); }
+                     delete deskElement.dataset.studentId; delete deskElement.dataset.studentNumber;
                  }
-                  this.updateGenderVisibility(); // Call this AFTER content is set
+                 this.updateGenderVisibility();
             }
 
             createDeskElement(deskId, student) {
-                // ... (same as v2.3) ...
-                const deskElement = document.createElement('div');
-                deskElement.className = 'desk';
-                deskElement.dataset.deskId = deskId;
-                this._updateDeskContent(deskElement, student); // Use helper to set initial content
+                const deskElement = document.createElement('div'); deskElement.className = 'desk'; deskElement.dataset.deskId = deskId;
+                this._updateDeskContent(deskElement, student);
                 return deskElement;
              }
 
             renderClassroomObjects() {
-                // ... (same as v2.3 - handles perspective for objects) ...
                 const showBb = this.state.showBlackboard; const showTd = this.state.showTeacherDesk;
                 this.elements.blackboardObject.classList.toggle('hidden', !showBb); this.elements.teacherDeskObject.classList.toggle('hidden', !showTd);
-                 this.elements.teacherDeskContainerTop.innerHTML = ''; this.elements.teacherDeskContainerBottom.innerHTML = ''; this.elements.classroomObjectsContainerTop.innerHTML = ''; this.elements.classroomObjectsContainerBottom.innerHTML = '';
-                 const [bbContainer, tdContainer] = (this.state.viewPerspective === 'teacher')
-                     ? [this.elements.classroomObjectsContainerTop, this.elements.teacherDeskContainerTop]
-                     : [this.elements.classroomObjectsContainerBottom, this.elements.teacherDeskContainerBottom];
-                 if (showBb) bbContainer.appendChild(this.elements.blackboardObject);
-                 if (showTd) tdContainer.appendChild(this.elements.teacherDeskObject);
-                 console.log(`Rendered classroom objects. Perspective: ${this.state.viewPerspective}. Blackboard in ${bbContainer.id}, Teacher Desk in ${tdContainer.id}`);
+                this.elements.teacherDeskContainerTop.innerHTML = ''; this.elements.teacherDeskContainerBottom.innerHTML = ''; this.elements.classroomObjectsContainerTop.innerHTML = ''; this.elements.classroomObjectsContainerBottom.innerHTML = '';
+                const [bbContainer, tdContainer] = (this.state.viewPerspective === 'teacher') ? [this.elements.classroomObjectsContainerTop, this.elements.teacherDeskContainerTop] : [this.elements.classroomObjectsContainerBottom, this.elements.teacherDeskContainerBottom];
+                if (showBb) bbContainer.appendChild(this.elements.blackboardObject);
+                if (showTd) tdContainer.appendChild(this.elements.teacherDeskObject);
             }
+
             updateUIState() {
-                // ... (same as v2.3) ...
                  this.elements.perspectiveToggleBtn.innerHTML = `<i class="fas fa-sync-alt mr-1"></i> ${this.state.viewPerspective === 'teacher' ? '切換學生視角' : '切換教師視角'}`;
-                 ['Blackboard', 'TeacherDesk'].forEach(type => {
-                     const showState = this.state[`show${type}`]; const btn = this.elements[`toggle${type}Btn`]; const icon = type === 'Blackboard' ? 'fa-chalkboard' : 'fa-person-chalkboard'; const text = type === 'Blackboard' ? '黑板' : '講桌'; const color = type === 'Blackboard' ? 'stone' : 'purple';
-                     btn.innerHTML = `<i class="fas ${icon} mr-1"></i> ${showState ? '隱藏' : '顯示'}${text}`;
-                     btn.classList.remove(`bg-${color}-700`, `hover:bg-${color}-800`, `bg-${color}-500`, `hover:bg-${color}-600`); btn.classList.add(`bg-${color}-${showState ? '700' : '500'}`, `hover:bg-${color}-${showState ? '800' : '600'}`);
-                 });
+                 ['Blackboard', 'TeacherDesk'].forEach(type => { const showState = this.state[`show${type}`]; const btn = this.elements[`toggle${type}Btn`]; const icon = type === 'Blackboard' ? 'fa-chalkboard' : 'fa-person-chalkboard'; const text = type === 'Blackboard' ? '黑板' : '講桌'; const color = type === 'Blackboard' ? 'stone' : 'purple'; btn.innerHTML = `<i class="fas ${icon} mr-1"></i> ${showState ? '隱藏' : '顯示'}${text}`; btn.classList.remove(`bg-${color}-700`, `hover:bg-${color}-800`, `bg-${color}-500`, `hover:bg-${color}-600`); btn.classList.add(`bg-${color}-${showState ? '700' : '500'}`, `hover:bg-${color}-${showState ? '800' : '600'}`); });
                  this.elements.showGenderCheckbox.checked = this.state.showGender; this.updateGenderVisibility();
              }
-            updatePrintOptionCheckboxes() { /* ... same ... */ this.elements.printNeedsCheckbox.checked = this.state.printNeeds; this.elements.printGenderCheckbox.checked = this.state.printGender; this.elements.printEmptySeatsCheckbox.checked = this.state.printEmptySeats; this.elements.printGroupNamesCheckbox.checked = this.state.printGroupNames; }
+            updatePrintOptionCheckboxes() { this.elements.printNeedsCheckbox.checked = this.state.printNeeds; this.elements.printGenderCheckbox.checked = this.state.printGender; this.elements.printEmptySeatsCheckbox.checked = this.state.printEmptySeats; this.elements.printGroupNamesCheckbox.checked = this.state.printGroupNames; }
 
             togglePerspective() {
                 this.state.viewPerspective = this.state.viewPerspective === 'teacher' ? 'student' : 'teacher';
-                console.log("Perspective toggled to:", this.state.viewPerspective);
-                this.updateUIState(); // Update buttons etc.
-                // Re-render the entire chart structure and populate to apply perspective changes
-                // This now uses the JS logic in renderGroupLayoutStructure for correct reversal
+                this.updateUIState();
                 this.renderSeatingChart();
             }
 
-            toggleClassroomBlackboard() { /* ... same ... */ this.state.showBlackboard = !this.state.showBlackboard; this.updateUIState(); this.renderClassroomObjects(); }
-            toggleClassroomTeacherDesk() { /* ... same ... */ this.state.showTeacherDesk = !this.state.showTeacherDesk; this.updateUIState(); this.renderClassroomObjects(); }
-            toggleGenderDisplay() { /* ... same ... */ this.state.showGender = this.elements.showGenderCheckbox.checked; this.updateGenderVisibility(); }
-            togglePrintNeeds() { /* ... same ... */ this.state.printNeeds = this.elements.printNeedsCheckbox.checked; console.log("Print Needs Toggled:", this.state.printNeeds); }
-            togglePrintGender() { /* ... same ... */ this.state.printGender = this.elements.printGenderCheckbox.checked; console.log("Print Gender Toggled:", this.state.printGender); }
-            togglePrintEmptySeats() { /* ... same ... */ this.state.printEmptySeats = this.elements.printEmptySeatsCheckbox.checked; console.log("Print Empty Seats Toggled:", this.state.printEmptySeats); }
-            togglePrintGroupNames() { /* ... same ... */ this.state.printGroupNames = this.elements.printGroupNamesCheckbox.checked; console.log("Print Group Names Toggled:", this.state.printGroupNames); }
+            toggleClassroomBlackboard() { this.state.showBlackboard = !this.state.showBlackboard; this.updateUIState(); this.renderClassroomObjects(); }
+            toggleClassroomTeacherDesk() { this.state.showTeacherDesk = !this.state.showTeacherDesk; this.updateUIState(); this.renderClassroomObjects(); }
+            toggleGenderDisplay() { this.state.showGender = this.elements.showGenderCheckbox.checked; this.updateGenderVisibility(); }
+            togglePrintNeeds() { this.state.printNeeds = this.elements.printNeedsCheckbox.checked; }
+            togglePrintGender() { this.state.printGender = this.elements.printGenderCheckbox.checked; }
+            togglePrintEmptySeats() { this.state.printEmptySeats = this.elements.printEmptySeatsCheckbox.checked; }
+            togglePrintGroupNames() { this.state.printGroupNames = this.elements.printGroupNamesCheckbox.checked; }
 
-            updateGenderVisibility() {
-                // ... (same as v2.3) ...
-                this.elements.classroomLayout.classList.toggle('gender-visible', this.state.showGender);
-            }
+            updateGenderVisibility() { this.elements.classroomLayout.classList.toggle('gender-visible', this.state.showGender); }
 
             destroySortable() {
-                // ... (same as v2.3) ...
-                console.log(`Attempting to destroy ${this.sortableInstances.length} tracked sortable instances.`);
-                this.sortableInstances.forEach((instance, index) => {
-                    if (instance && typeof instance.destroy === 'function') {
-                        try { instance.destroy(); } catch (e) { console.error(`Error destroying sortable ${index} on element:`, instance.el, e); }
-                    } else { console.warn(`Sortable instance ${index} was invalid or already destroyed.`); }
-                });
+                this.sortableInstances.forEach((instance) => { if (instance && typeof instance.destroy === 'function') { try { instance.destroy(); } catch (e) { console.error(`Error destroying sortable:`, instance.el, e); } } });
                 this.sortableInstances = [];
                 const containers = [this.elements.seatingChart, ...this.elements.seatingChart.querySelectorAll('.group-container')];
-                containers.forEach(el => {
-                    if (el && Sortable.get(el)) {
-                        console.warn("Found lingering sortable after clear, destroying:", el);
-                        try { Sortable.get(el).destroy(); } catch(e) { console.error("Error destroying lingering sortable:", el, e); }
-                    }
-                });
-                console.log("Sortable instances cleared.");
+                containers.forEach(el => { if (el && Sortable.get(el)) { try { Sortable.get(el).destroy(); } catch(e) { console.error("Error destroying lingering sortable:", el, e); } } });
             }
+
             initSortableForTraditional() {
-                // ... (same as v2.3) ...
                  if (this.state.seatingMode !== 'traditional') return;
-                 if(Sortable.get(this.elements.seatingChart)) { console.warn("Sortable already exists on traditional chart, destroying first."); Sortable.get(this.elements.seatingChart).destroy();}
-                 console.log("Init SortableJS: TRADITIONAL desks.");
+                 if(Sortable.get(this.elements.seatingChart)) { Sortable.get(this.elements.seatingChart).destroy();}
                  const instance = new Sortable(this.elements.seatingChart, { group: 'shared-desks', animation: 150, ghostClass: 'sortable-ghost', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => this.handleDragEnd(evt) });
                  this.sortableInstances.push(instance);
              }
+
             initSortableForGroups() {
-                // ... (same as v2.3) ...
                  if (this.state.seatingMode !== 'group') return;
-                 console.log("Init SortableJS: desks WITHIN groups.");
                  this.elements.seatingChart.querySelectorAll('.group-container').forEach(container => {
-                     if(Sortable.get(container)) { console.warn("Sortable already exists on group container, destroying first.", container); Sortable.get(container).destroy();}
+                     if(Sortable.get(container)) { Sortable.get(container).destroy();}
                      const instance = new Sortable(container, { group: 'shared-desks', animation: 150, ghostClass: 'sortable-ghost', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => this.handleDragEnd(evt) });
                      this.sortableInstances.push(instance);
                  });
              }
+
             initSortableForGroupContainers() {
-                // ... (same as v2.3) ...
                  if (this.state.seatingMode !== 'group') return;
                  const existingGroupSortable = this.sortableInstances.find(inst => inst.el === this.elements.seatingChart && inst.options.group !== 'shared-desks');
-                 if (existingGroupSortable) { console.log("Group container SortableJS already initialized."); return; }
+                 if (existingGroupSortable) { return; }
                  const existingDeskSortable = Sortable.get(this.elements.seatingChart);
-                 if (existingDeskSortable && existingDeskSortable.options.group === 'shared-desks') { console.warn("Incorrect DESK sortable on seatingChart in group mode, destroying."); existingDeskSortable.destroy(); }
-
-                 console.log("Init SortableJS: GROUP CONTAINERS.");
-                 const instance = new Sortable(this.elements.seatingChart, { animation: 150, filter: '.desk', preventOnFilter: true, ghostClass: 'sortable-ghost-group', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => { console.log("Group container drag finished."); this.updateLayoutMapBasedOnDOM(); } });
+                 if (existingDeskSortable && existingDeskSortable.options.group === 'shared-desks') { existingDeskSortable.destroy(); }
+                 const instance = new Sortable(this.elements.seatingChart, { animation: 150, filter: '.desk', preventOnFilter: true, ghostClass: 'sortable-ghost-group', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => { this.updateLayoutMapBasedOnDOM(); } });
                  this.sortableInstances.push(instance);
              }
 
             handleDragEnd(evt) {
-                // ... (same as v2.3 - handles swap/insert logic) ...
-                 const { item: draggedItem, to: targetList, from: sourceList, oldIndex: oldVisualIndex, newIndex: newVisualIndex } = evt;
-                 console.log(`handleDragEnd: Desk drag. Mode: ${this.state.dragMode}.`);
-                 const isDraggedItemEmpty = draggedItem.classList.contains('empty-seat');
+                 const { item: draggedItem, to: targetList, from: sourceList, newIndex: newVisualIndex } = evt;
                  const draggedOriginalDeskId = draggedItem.dataset.deskId;
-                 const draggedStudent = isDraggedItemEmpty ? null : this.state.layoutMap.get(draggedOriginalDeskId);
-
-                 if (!draggedOriginalDeskId) { console.error("Dragged item missing desk ID!", draggedItem); this.updateLayoutMapBasedOnDOM(); this.renderSeatingChart(); return; }
-                 if (!isDraggedItemEmpty && !draggedStudent) { console.error(`SYNC ISSUE: Dragged ${draggedOriginalDeskId} not empty but no student in map! Forcing sync.`); this.updateLayoutMapBasedOnDOM(); this.renderSeatingChart(); return; }
-
-                 console.log(` Dragged: ${draggedOriginalDeskId}` + (isDraggedItemEmpty ? ' (Empty)' : ` (${draggedStudent?.number} ${draggedStudent?.name})`));
-                 console.log(` From list: ${sourceList.dataset?.groupKey || 'Traditional'}, To list: ${targetList.dataset?.groupKey || 'Traditional'}, New visual index: ${newVisualIndex}`);
-
+                 if (!draggedOriginalDeskId) { this.renderSeatingChart(); return; }
                  if (this.state.dragMode === 'swap') {
-                     console.log(" Mode: SWAP Attempt");
                      const targetElement = targetList.children[newVisualIndex];
-
                      if (targetElement && targetElement !== draggedItem && targetElement.classList.contains('desk')) {
+                         const isDraggedItemEmpty = draggedItem.classList.contains('empty-seat');
+                         const draggedStudent = isDraggedItemEmpty ? null : this.state.layoutMap.get(draggedOriginalDeskId);
                          const isTargetEmpty = targetElement.classList.contains('empty-seat');
                          const targetOriginalDeskId = targetElement.dataset.deskId;
                          const targetStudent = isTargetEmpty ? null : this.state.layoutMap.get(targetOriginalDeskId);
-
-                         if (!targetOriginalDeskId) { console.error("Swap target missing desk ID!", targetElement); this.updateLayoutMapBasedOnDOM(); this.renderSeatingChart(); return; }
-                         if (!isTargetEmpty && !targetStudent) { console.error(`SYNC ISSUE: Swap target ${targetOriginalDeskId} not empty but no student in map! Forcing sync.`); this.updateLayoutMapBasedOnDOM(); this.renderSeatingChart(); return; }
-
-                         console.log(` Swap Target: ${targetOriginalDeskId}` + (isTargetEmpty ? ' (Empty)' : ` (${targetStudent?.number} ${targetStudent?.name})`));
-                         console.log(" Swapping in layoutMap...");
-
-                         if (targetStudent) this.state.layoutMap.set(draggedOriginalDeskId, targetStudent);
-                         else this.state.layoutMap.delete(draggedOriginalDeskId);
-
-                         if (draggedStudent) this.state.layoutMap.set(targetOriginalDeskId, draggedStudent);
-                         else this.state.layoutMap.delete(targetOriginalDeskId);
-
-                         console.log(" Swap complete. Force render to reflect map changes.");
+                         if (!targetOriginalDeskId) { this.renderSeatingChart(); return; }
+                         if (targetStudent) this.state.layoutMap.set(draggedOriginalDeskId, targetStudent); else this.state.layoutMap.delete(draggedOriginalDeskId);
+                         if (draggedStudent) this.state.layoutMap.set(targetOriginalDeskId, draggedStudent); else this.state.layoutMap.delete(targetOriginalDeskId);
                          this.renderSeatingChart();
                          return;
-
-                     } else {
-                         console.log(" Swap target invalid or same as source. Fallback to INSERT/Sync logic.");
                      }
                  }
-
-                 console.log(" Mode: INSERT or SWAP Fallback - Syncing DOM to map.");
-                 this.updateLayoutMapBasedOnDOM(); // Sync map based on new DOM state
-                 // Optional: Re-render after sync if subtle visual glitches occur
-                 // this.renderSeatingChart();
-                 console.log(" Sync complete.");
-             }
-
+                 this.updateLayoutMapBasedOnDOM();
+            }
 
             updateLayoutMapBasedOnDOM() {
-                // ... (same as v2.3 - crucial for keeping map synced with visual state) ...
-                console.log("--- Updating layoutMap based on DOM ---");
                 const newLayoutMap = new Map();
                 let currentDeskCount = 0;
-                const deskElements = this.elements.seatingChart.querySelectorAll('.desk');
                 const studentMapById = new Map(this.state.students.map(s => [s.id, s]));
-
                 if (this.state.seatingMode === 'traditional') {
-                    deskElements.forEach((deskElement) => {
+                    this.elements.seatingChart.querySelectorAll('.desk').forEach((deskElement) => {
                         currentDeskCount++;
-                        const deskId = deskElement.dataset.deskId;
-                        if (!deskId) { console.warn("Desk missing data-desk-id (traditional)."); return; }
+                        const deskId = deskElement.dataset.deskId; if (!deskId) return;
                         const studentId = deskElement.dataset.studentId;
-                        if (studentId && !deskElement.classList.contains('empty-seat')) {
-                             const student = studentMapById.get(studentId);
-                            if (student) newLayoutMap.set(deskId, student);
-                            else console.warn(`Student with ID ${studentId} not found in state for desk ${deskId}`);
-                        }
+                        if (studentId && !deskElement.classList.contains('empty-seat')) { const student = studentMapById.get(studentId); if (student) newLayoutMap.set(deskId, student); }
                     });
-                } else { // Group Mode
-                    const groupContainers = Array.from(this.elements.seatingChart.querySelectorAll('.group-container'));
-                    groupContainers.forEach((container) => {
-                        const groupKey = container.dataset.groupKey;
-                        if (!groupKey) { console.warn("Group missing data-group-key."); return; }
-                        const groupDesks = Array.from(container.querySelectorAll('.desk'));
-                        currentDeskCount += groupDesks.length;
-
+                } else {
+                    this.elements.seatingChart.querySelectorAll('.group-container').forEach((container) => {
+                        const groupKey = container.dataset.groupKey; if (!groupKey) return;
+                        const groupDesks = Array.from(container.querySelectorAll('.desk')); currentDeskCount += groupDesks.length;
                         groupDesks.forEach((deskElement, visualDeskIndex) => {
-                             const newDeskId = `${groupKey}d${visualDeskIndex}`;
-                             deskElement.dataset.deskId = newDeskId; // Update DOM ID during sync
-
+                             const newDeskId = `${groupKey}d${visualDeskIndex}`; deskElement.dataset.deskId = newDeskId;
                              const studentId = deskElement.dataset.studentId;
-                             if (studentId && !deskElement.classList.contains('empty-seat')) {
-                                 const student = studentMapById.get(studentId);
-                                 if (student) newLayoutMap.set(newDeskId, student);
-                                 else console.warn(`Student with ID ${studentId} not found for new desk ${newDeskId}`);
-                             } else if (!deskElement.classList.contains('empty-seat') && !studentId) {
-                                 console.warn(`Occupied desk ${newDeskId} missing studentId. Leaving empty in map.`);
-                             }
+                             if (studentId && !deskElement.classList.contains('empty-seat')) { const student = studentMapById.get(studentId); if (student) newLayoutMap.set(newDeskId, student); }
                         });
                     });
                 }
-
                 this.state.layoutMap = newLayoutMap;
-                console.log("layoutMap updated from DOM. Size:", this.state.layoutMap.size);
                 this.updateClassInfo(currentDeskCount, this.state.layoutMap.size);
-                console.log("--- Finished updating layoutMap from DOM ---");
-                return { deskCount: currentDeskCount, studentCount: this.state.layoutMap.size };
             }
 
-            handleDeleteSeat(deleteButton) {
-                // ... (same as v2.3) ...
-                if (this.state.seatingMode !== 'group') return; const deskElement = deleteButton.closest('.desk.empty-seat'); if (!deskElement) return;
-                const groupContainer = deskElement.closest('.group-container'); if (!groupContainer) return;
-                const deskId = deskElement.dataset.deskId;
-                console.log(`Deleting empty seat (direct): ${deskId}`);
-                if(deskId) this.state.layoutMap.delete(deskId);
-                deskElement.remove();
-                this.updateLayoutMapBasedOnDOM(); // Resync after removal
-            }
-            handleDeleteGroup(deleteButton) {
-                // ... (same as v2.3) ...
-                 if (this.state.seatingMode !== 'group') return; const groupContainer = deleteButton.closest('.group-container'); if (!groupContainer) return;
-                 const groupKey = groupContainer.dataset.groupKey; const groupName = this.state.groupNames[groupKey] ?? `Group ${parseInt(groupKey?.substring(1) ?? -1) + 1}`;
-                 console.log(`Deleting group ${groupKey} ("${groupName}") (direct)`);
-
-                 const sortableInstance = this.sortableInstances.find(inst => inst.el === groupContainer);
-                 if (sortableInstance) {
-                     try { sortableInstance.destroy(); } catch (e) { console.error("Error destroying group desk sortable:", e); }
-                     this.sortableInstances = this.sortableInstances.filter(inst => inst !== sortableInstance);
-                 } else console.warn(`No sortable instance found for deleted group container ${groupKey}.`);
-
-                 if(groupKey) delete this.state.groupNames[groupKey];
-                 console.log(`Removed group name for ${groupKey}.`);
-                 groupContainer.remove();
-                 this.updateLayoutMapBasedOnDOM(); // Resync after removal
-            }
+            handleDeleteSeat(deleteButton) { if (this.state.seatingMode !== 'group') return; const deskElement = deleteButton.closest('.desk.empty-seat'); if (!deskElement) return; const groupContainer = deskElement.closest('.group-container'); if (!groupContainer) return; const deskId = deskElement.dataset.deskId; if(deskId) this.state.layoutMap.delete(deskId); deskElement.remove(); this.updateLayoutMapBasedOnDOM(); }
+            handleDeleteGroup(deleteButton) { if (this.state.seatingMode !== 'group') return; const groupContainer = deleteButton.closest('.group-container'); if (!groupContainer) return; const groupKey = groupContainer.dataset.groupKey; const sortableInstance = this.sortableInstances.find(inst => inst.el === groupContainer); if (sortableInstance) { try { sortableInstance.destroy(); } catch (e) {} this.sortableInstances = this.sortableInstances.filter(inst => inst !== sortableInstance); } if(groupKey) delete this.state.groupNames[groupKey]; groupContainer.remove(); this.updateLayoutMapBasedOnDOM(); }
+            
             addNewGroup() {
-                // ... (same as v2.3) ...
                  if (this.state.seatingMode !== 'group') return;
-                 const newGroupIndex = this.nextGroupId++;
-                 const newGroupKey = `g${newGroupIndex}`;
-                 console.log(`Adding new group ${newGroupKey} (nextGroupId is now ${this.nextGroupId})`);
+                 const newGroupIndex = this.nextGroupId++; const newGroupKey = `g${newGroupIndex}`;
                  this.state.groupNames[newGroupKey] = `第 ${newGroupIndex + 1} 組`;
-
                  const groupContainer = this.createGroupContainerElement(newGroupKey);
                  const initialSeats = Math.max(1, this.state.studentsPerGroup);
-
-                 for (let s = 0; s < initialSeats; s++) {
-                     const deskId = `${newGroupKey}d${s}`;
-                     groupContainer.appendChild(this.createDeskElement(deskId, null));
-                 }
-
-                 // Append based on current perspective
+                 for (let s = 0; s < initialSeats; s++) { const deskId = `${newGroupKey}d${s}`; groupContainer.appendChild(this.createDeskElement(deskId, null)); }
                  const chart = this.elements.seatingChart;
-                 if(this.state.viewPerspective === 'student'){
-                     chart.insertBefore(groupContainer, chart.firstChild); // Add to beginning for student view
-                 } else {
-                     chart.appendChild(groupContainer); // Add to end for teacher view
-                 }
-
-
+                 if(this.state.viewPerspective === 'student'){ chart.insertBefore(groupContainer, chart.firstChild); } else { chart.appendChild(groupContainer); }
                  const deskSortable = new Sortable(groupContainer, { group: 'shared-desks', animation: 150, ghostClass: 'sortable-ghost', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => this.handleDragEnd(evt) });
                  this.sortableInstances.push(deskSortable);
-
-                 // Update counts and sync map (important for new desk IDs)
-                 this.updateLayoutMapBasedOnDOM(); // Sync ensures new desks get correct IDs
+                 this.updateLayoutMapBasedOnDOM();
             }
 
-            // --- Print & Utility ---
             handlePrint() {
-                // ... (same as v2.3) ...
-                 console.log("Preparing to print...");
                  this.elements.printClassName.textContent = this.state.className || '座位表'; this.elements.printClassName.classList.remove('hidden');
                  this.tempPrintClasses.emptyGroups.clear();
                  this.elements.body.classList.toggle('print-hide-needs', !this.state.printNeeds);
@@ -1128,129 +816,119 @@
                  if (!this.state.printEmptySeats && this.state.seatingMode === 'group') {
                      this.elements.seatingChart.querySelectorAll('.group-container').forEach(container => {
                          const hasStudents = container.querySelector('.desk:not(.empty-seat)');
-                         if (!hasStudents) { container.classList.add('print-empty-group'); this.tempPrintClasses.emptyGroups.add(container); console.log(`Marked group ${container.dataset.groupKey} as print-empty-group`); }
+                         if (!hasStudents) { container.classList.add('print-empty-group'); this.tempPrintClasses.emptyGroups.add(container); }
                      });
                  }
-                 console.log(`Print settings - Needs: ${this.state.printNeeds}, Gender: ${this.state.printGender}, EmptySeats/Groups: ${this.state.printEmptySeats}, GroupNames: ${this.state.printGroupNames}`);
-                 window.print(); console.log("Print dialog open.");
+                 window.print();
             }
             _cleanupAfterPrint() {
-                // ... (same as v2.3) ...
-                 console.log("Running after print cleanup.");
                  this.elements.body.classList.remove('print-hide-needs', 'print-hide-gender', 'print-hide-empty', 'print-hide-group-names');
                  this.tempPrintClasses.emptyGroups.forEach(container => { container.classList.remove('print-empty-group'); });
                  this.tempPrintClasses.emptyGroups.clear();
                  this.elements.printClassName.textContent = ''; this.elements.printClassName.classList.add('hidden');
-                 console.log("Print cleanup finished.");
             }
-            setupPrintListener() {
-                // ... (same as v2.3) ...
-                const afterPrintHandler = () => this._cleanupAfterPrint();
-                if (window.matchMedia) {
-                    const mediaQueryList = window.matchMedia('print');
-                    const handleChange = (mql) => { if (!mql.matches) { afterPrintHandler(); } };
-                    if (mediaQueryList.addEventListener) { mediaQueryList.addEventListener('change', handleChange); }
-                    else if (mediaQueryList.addListener) { mediaQueryList.addListener(handleChange); }
-                }
-                window.onafterprint = afterPrintHandler; // Fallback
-            }
-            getNeedsIcon(needs) { /* ... same ... */ if (!needs) return 'fa-comment-dots'; const l = needs.toLowerCase(); if (l.includes('視力')||l.includes('vision')||l.includes('眼鏡')) return 'fa-eye'; if (l.includes('聽力')||l.includes('hearing')) return 'fa-ear-listen'; if (l.includes('協助')||l.includes('support')) return 'fa-hands-helping'; if (l.includes('行動')||l.includes('mobility')||l.includes('輪椅')) return 'fa-wheelchair'; if (l.includes('過動')||l.includes('adhd')||l.includes('分心')) return 'fa-bolt'; if (l.includes('提醒')||l.includes('注意')||l.includes('prompt')) return 'fa-bell'; if (l.includes('安靜')||l.includes('害羞')||l.includes('quiet')) return 'fa-volume-xmark'; if (l.includes('資優')||l.includes('gifted')) return 'fa-star'; if (l.includes('學習')||l.includes('learn')) return 'fa-book-open-reader'; if (l.includes('情緒')||l.includes('emotion')) return 'fa-face-sad-tear'; return 'fa-comment-dots'; }
-            updateClassInfo(totalDeskCount, assignedCount) { /* ... same ... */ const emptySeats = Math.max(0, totalDeskCount - assignedCount); this.elements.classInfo.innerHTML = `座位總數: <span class="font-medium">${totalDeskCount}</span> | 已排人數: <span class="text-blue-600 font-medium">${assignedCount}</span> | 空位數: <span class="text-green-600 font-medium">${emptySeats}</span>`; }
-
-            generateExcelTemplate(e) {
-                // ... (same as v2.3) ...
-                 e.preventDefault(); const wb = this.xlsx.utils.book_new(); const wsData = [ ['座號', '姓名', '性別', '需求'], ['1', '公小民', '男', '需要提醒'], ['2', '邱小瑜', '女', '沉癮AI無法自拔'], ['3', '陳大德', 'Male', ''], ['4', '林美盛', 'F', '視力不好'], ['5', '王小俐', 'F', ''] ];
-                 const ws = this.xlsx.utils.aoa_to_sheet(wsData); ws['!cols'] = [ { wch: 8 }, { wch: 12 }, { wch: 6 }, { wch: 25 } ]; this.xlsx.utils.book_append_sheet(wb, ws, '學生名單'); this.xlsx.writeFile(wb, '學生名單範本.xlsx');
-            }
+            setupPrintListener() { const afterPrintHandler = () => this._cleanupAfterPrint(); if (window.matchMedia) { const mediaQueryList = window.matchMedia('print'); const handleChange = (mql) => { if (!mql.matches) { afterPrintHandler(); } }; if (mediaQueryList.addEventListener) { mediaQueryList.addEventListener('change', handleChange); } else if (mediaQueryList.addListener) { mediaQueryList.addListener(handleChange); } } window.onafterprint = afterPrintHandler; }
+            getNeedsIcon(needs) { if (!needs) return 'fa-comment-dots'; const l = needs.toLowerCase(); if (l.includes('視力')||l.includes('vision')) return 'fa-eye'; if (l.includes('聽力')||l.includes('hearing')) return 'fa-ear-listen'; if (l.includes('協助')||l.includes('support')) return 'fa-hands-helping'; if (l.includes('行動')||l.includes('mobility')) return 'fa-wheelchair'; if (l.includes('過動')||l.includes('adhd')) return 'fa-bolt'; if (l.includes('提醒')||l.includes('prompt')) return 'fa-bell'; if (l.includes('安靜')||l.includes('quiet')) return 'fa-volume-xmark'; if (l.includes('資優')||l.includes('gifted')) return 'fa-star'; if (l.includes('學習')||l.includes('learn')) return 'fa-book-open-reader'; if (l.includes('情緒')||l.includes('emotion')) return 'fa-face-sad-tear'; return 'fa-comment-dots'; }
+            updateClassInfo(totalDeskCount, assignedCount) { const emptySeats = Math.max(0, totalDeskCount - assignedCount); this.elements.classInfo.innerHTML = `座位總數: <span class="font-medium">${totalDeskCount}</span> | 已排人數: <span class="text-blue-600 font-medium">${assignedCount}</span> | 空位數: <span class="text-green-600 font-medium">${emptySeats}</span>`; }
+            
+            generateExcelTemplate(e) { e.preventDefault(); const wb = this.xlsx.utils.book_new(); const wsData = [ ['座號', '姓名', '性別', '需求'], ['1', '公小民', '男', '需要提醒'], ['2', '邱小瑜', '女', '沉癮AI無法自拔'], ['3', '陳大德', 'Male', ''], ['4', '林美盛', 'F', '視力不好'], ['5', '王小俐', 'F', ''] ]; const ws = this.xlsx.utils.aoa_to_sheet(wsData); ws['!cols'] = [ { wch: 8 }, { wch: 12 }, { wch: 6 }, { wch: 25 } ]; this.xlsx.utils.book_append_sheet(wb, ws, '學生名單'); this.xlsx.writeFile(wb, '學生名單範本.xlsx'); }
+            
             importStudentsFromExcel() {
-                // ... (same as v2.3) ...
                  const fileInput = this.elements.excelFile; if (!fileInput.files || fileInput.files.length === 0) { alert('請選擇 Excel 檔案！'); return; } const file = fileInput.files[0]; const reader = new FileReader();
                  reader.onload = (e) => { try {
                      const data = new Uint8Array(e.target.result); const workbook = this.xlsx.read(data, { type: 'array' }); const firstSheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[firstSheetName];
-                     const jsonDataRaw = this.xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '', blankrows: false });
-                     const jsonData = jsonDataRaw.filter(row => Array.isArray(row) && row.some(cell => cell !== null && String(cell).trim() !== ''));
-                     if (jsonData.length === 0) { alert('Excel 檔案似乎是空的或沒有有效資料列。'); return; }
-                     let headerRowIndex = -1; let headers = {}; const headerKeywords = { number: ['座號', '學號', 'number', 'seat', 'no'], name: ['姓名', 'name', 'student'], gender: ['性別', 'gender', 'sex'], needs: ['需求', '註記', '備註', 'needs', 'tag', 'remark', 'special'] };
-                     for (let i = 0; i < Math.min(5, jsonData.length); i++) { const row = jsonData[i]; const potentialHeaders = row.map(cell => String(cell).trim().toLowerCase()); let foundHeadersCount = 0; let tempHeaders = {}; potentialHeaders.forEach((headerText, colIndex) => { for (const key in headerKeywords) { if (headerKeywords[key].includes(headerText)) { tempHeaders[key] = colIndex; foundHeadersCount++; break; } } }); if (tempHeaders.name !== undefined && (tempHeaders.gender !== undefined || tempHeaders.number !== undefined)) { headers = tempHeaders; headerRowIndex = i; console.log("Header row found:", headerRowIndex, "Headers map:", headers); break; } }
-                     let dataStartIndex = 0; if (headerRowIndex !== -1) { dataStartIndex = headerRowIndex + 1; if (headers.number === undefined) console.warn("Import: '座號' header not found."); if (headers.name === undefined) console.warn("Import: '姓名' header not found."); if (headers.gender === undefined) console.warn("Import: '性別' header not found."); if (headers.name === undefined || (headers.gender === undefined && headers.number === undefined) ) { alert("無法可靠識別 '姓名' 和 '性別'/'座號' 欄位。\n將嘗試預設 A, B, C, D (從第一列開始)。"); headers = { number: 0, name: 1, gender: 2, needs: 3 }; dataStartIndex = 0; headerRowIndex = -1; } }
-                     else { alert('未偵測到標頭列，將嘗試以預設 A(座號), B(姓名), C(性別), D(需求) 從第一列開始匯入。'); headers = { number: 0, name: 1, gender: 2, needs: 3 }; dataStartIndex = 0; }
-                     let studentListText = ''; for (let i = dataStartIndex; i < jsonData.length; i++) { const row = jsonData[i]; const number = String(row[headers.number] ?? '').trim(); const name = String(row[headers.name] ?? '').trim(); const gender = String(row[headers.gender] ?? '').trim(); const needs = String(row[headers.needs] ?? '').trim(); if (name && (number || gender)) { studentListText += `${number || '?'} ${name} ${gender || '未知'}${needs ? ' ' + needs : ''}\n`; } else if (name || number || gender || needs) { console.log(`Skipping row ${i + 1} due to missing essential data (Name and Number/Gender):`, row); } }
-                     if (!studentListText) { alert('在 Excel 中找不到有效的學生資料 (請確保包含姓名和座號/性別)。'); return; }
+                     const jsonDataRaw = this.xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '', blankrows: false }); const jsonData = jsonDataRaw.filter(row => Array.isArray(row) && row.some(cell => cell !== null && String(cell).trim() !== '')); if (jsonData.length === 0) { alert('Excel 檔案似乎是空的。'); return; }
+                     let headerRowIndex = -1; let headers = {}; const headerKeywords = { number: ['座號', '學號'], name: ['姓名'], gender: ['性別'], needs: ['需求', '註記', '備註'] };
+                     for (let i = 0; i < Math.min(5, jsonData.length); i++) { const row = jsonData[i]; const potentialHeaders = row.map(cell => String(cell).trim().toLowerCase()); let tempHeaders = {}; potentialHeaders.forEach((headerText, colIndex) => { for (const key in headerKeywords) { if (headerKeywords[key].includes(headerText)) { tempHeaders[key] = colIndex; break; } } }); if (tempHeaders.name !== undefined && (tempHeaders.gender !== undefined || tempHeaders.number !== undefined)) { headers = tempHeaders; headerRowIndex = i; break; } }
+                     let dataStartIndex = 0; if (headerRowIndex !== -1) { dataStartIndex = headerRowIndex + 1; if (headers.name === undefined || (headers.gender === undefined && headers.number === undefined) ) { alert("無法可靠識別 '姓名' 和 '性別'/'座號' 欄位。"); headers = { number: 0, name: 1, gender: 2, needs: 3 }; dataStartIndex = 0; } } else { alert('未偵測到標頭列，將嘗試預設 A, B, C, D 欄位。'); headers = { number: 0, name: 1, gender: 2, needs: 3 }; dataStartIndex = 0; }
+                     let studentListText = ''; for (let i = dataStartIndex; i < jsonData.length; i++) { const row = jsonData[i]; const number = String(row[headers.number] ?? '').trim(); const name = String(row[headers.name] ?? '').trim(); const gender = String(row[headers.gender] ?? '').trim(); const needs = String(row[headers.needs] ?? '').trim(); if (name && (number || gender)) { studentListText += `${number || '?'} ${name} ${gender || '未知'}${needs ? ' ' + needs : ''}\n`; } }
+                     if (!studentListText) { alert('在 Excel 中找不到有效的學生資料。'); return; }
                      this.elements.studentsTextarea.value = studentListText.trim(); fileInput.value = '';
-                     this.arrangeSeats(); // RESET layout
-                     alert('學生名單已成功從 Excel 匯入並重新排列座位！');
+                     this.arrangeSeats(); alert('學生名單已成功從 Excel 匯入並重新排列座位！');
                  } catch (error) { console.error("Excel import error:", error); alert(`讀取 Excel 失敗：${error.message}`); } };
                  reader.onerror = (error) => { console.error("File reading error:", error); alert('無法讀取檔案。'); }; reader.readAsArrayBuffer(file);
             }
             exportSeatingLayout() {
-                // ... (same as v2.3 - export based on DOM order after sync) ...
-                 this.updateLayoutMapBasedOnDOM(); // Sync first!
-                 const totalDeskCount = this.elements.seatingChart.querySelectorAll('.desk').length;
-                 if (this.state.layoutMap.size === 0 && totalDeskCount === 0) { alert("沒有座位資料可匯出。"); return; }
-
+                 this.updateLayoutMapBasedOnDOM();
+                 const totalDeskCount = this.elements.seatingChart.querySelectorAll('.desk').length; if (this.state.layoutMap.size === 0 && totalDeskCount === 0) { alert("沒有座位資料可匯出。"); return; }
                  const wb = this.xlsx.utils.book_new(); const wsData = []; const EMPTY_SEAT_TEXT = '--- 空位 ---';
-
                  if (this.state.seatingMode === 'traditional') {
                      wsData.push(['座位表 (傳統模式)']); wsData.push([`班級: ${this.state.className || '(未命名)'}`]); wsData.push([]);
                      const rows = this.state.rows; const cols = this.state.cols;
                      const rowIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: rows }, (_, i) => i) : Array.from({ length: rows }, (_, i) => rows - 1 - i);
                      const colIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: cols }, (_, j) => j) : Array.from({ length: cols }, (_, j) => cols - 1 - j);
                      const headerRow = ['列 \\ 行']; colIndices.forEach(j => headerRow.push(`第 ${j + 1} 行`)); wsData.push(headerRow);
-                     rowIndices.forEach(i => {
-                        const rowData = [`第 ${i + 1} 列`];
-                        colIndices.forEach(j => {
-                            const seatId = `r${i}c${j}`;
-                            const student = this.state.layoutMap.get(seatId);
-                            rowData.push(student ? `${student.number||'?'} ${student.name||'?'} (${student.gender||'?'})${student.needs ? ` [${student.needs}]`:''}` : EMPTY_SEAT_TEXT);
-                         });
-                         wsData.push(rowData);
-                     });
-                 } else { // Group Mode
+                     rowIndices.forEach(i => { const rowData = [`第 ${i + 1} 列`]; colIndices.forEach(j => { const seatId = `r${i}c${j}`; const student = this.state.layoutMap.get(seatId); rowData.push(student ? `${student.number||'?'} ${student.name||'?'} (${student.gender||'?'})${student.needs ? ` [${student.needs}]`:''}` : EMPTY_SEAT_TEXT); }); wsData.push(rowData); });
+                 } else {
                      wsData.push(['座位表 (小組模式)']); wsData.push([`班級: ${this.state.className || '(未命名)'}`]); wsData.push([]);
                      wsData.push(['小組名稱', '組內順序 (依畫面)', '學生 (座號 姓名 性別 [需求])']);
                      const groupContainers = Array.from(this.elements.seatingChart.querySelectorAll('.group-container'));
-                     if (groupContainers.length === 0) { wsData.push(['(沒有任何小組)', '', '']); }
-                     else {
+                     if (groupContainers.length === 0) { wsData.push(['(沒有任何小組)', '', '']); } else {
                          groupContainers.forEach((container) => {
-                             const groupKey = container.dataset.groupKey;
-                             const groupIndex = parseInt(groupKey?.substring(1) ?? -1);
-                             const groupNameState = this.state.groupNames[groupKey];
-                             const groupName = (groupNameState === undefined || groupNameState === null) ? `第 ${groupIndex + 1} 組` : (groupNameState === '' ? '(未命名小組)' : groupNameState);
+                             const groupKey = container.dataset.groupKey; const groupIndex = parseInt(groupKey?.substring(1) ?? -1); const groupNameState = this.state.groupNames[groupKey]; const groupName = (groupNameState === undefined || groupNameState === null) ? `第 ${groupIndex + 1} 組` : (groupNameState === '' ? '(未命名小組)' : groupNameState);
                              wsData.push([`--- ${groupName} ---`, '', '']);
                              const desks = Array.from(container.querySelectorAll('.desk'));
-                             if (desks.length === 0) { wsData.push(['', '(此組無座位)', '']); }
-                             else {
-                                 desks.forEach((desk, visualSeatIndex) => {
-                                     const deskId = desk.dataset.deskId; // Use current visual ID
-                                     const student = this.state.layoutMap.get(deskId);
-                                     wsData.push(['', `座位 ${visualSeatIndex + 1}`, student ? `${student.number||'?'} ${student.name||'?'} (${student.gender||'?'})${student.needs ? ` [${student.needs}]`:''}` : EMPTY_SEAT_TEXT]);
-                                 });
+                             if (desks.length === 0) { wsData.push(['', '(此組無座位)', '']); } else {
+                                 desks.forEach((desk, visualSeatIndex) => { const deskId = desk.dataset.deskId; const student = this.state.layoutMap.get(deskId); wsData.push(['', `座位 ${visualSeatIndex + 1}`, student ? `${student.number||'?'} ${student.name||'?'} (${student.gender||'?'})${student.needs ? ` [${student.needs}]`:''}` : EMPTY_SEAT_TEXT]); });
                              }
                              wsData.push([]);
                          });
                      }
                  }
-
-                 const ws = this.xlsx.utils.aoa_to_sheet(wsData);
-                 const colWidths = wsData.reduce((widths, row) => { row.forEach((cell, colIndex) => { const cellLen = cell ? String(cell).length : 0; widths[colIndex] = Math.max(widths[colIndex] || 8, cellLen + 2); }); return widths; }, []);
-                 ws['!cols'] = colWidths.map(wch => ({ wch: Math.min(wch, 50) }));
-                 const sheetName = (this.state.className || '座位表').substring(0, 30);
-                 this.xlsx.utils.book_append_sheet(wb, ws, sheetName);
+                 const ws = this.xlsx.utils.aoa_to_sheet(wsData); const colWidths = wsData.reduce((widths, row) => { row.forEach((cell, colIndex) => { const cellLen = cell ? String(cell).length : 0; widths[colIndex] = Math.max(widths[colIndex] || 8, cellLen + 2); }); return widths; }, []); ws['!cols'] = colWidths.map(wch => ({ wch: Math.min(wch, 50) }));
+                 const sheetName = (this.state.className || '座位表').substring(0, 30); this.xlsx.utils.book_append_sheet(wb, ws, sheetName);
                  const date = new Date(); const dateString = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
                  const filename = `${this.state.className || '座位表'}_佈局_${dateString}.xlsx`;
                  try { this.xlsx.writeFile(wb, filename); } catch (e) { console.error("Excel export error:", e); alert(`匯出失敗: ${e.message}`); }
             }
-            shuffleArray(array) { /* ... same ... */ const newArray = [...array]; for (let i = newArray.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [newArray[i], newArray[j]] = [newArray[j], newArray[i]]; } return newArray; }
+
+            shuffleArray(array) { const newArray = [...array]; for (let i = newArray.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [newArray[i], newArray[j]] = [newArray[j], newArray[i]]; } return newArray; }
         }
 
-        // --- Global Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
-             // ... (library checks same as v2.3) ...
-            if (typeof XLSX === 'undefined') { console.error("XLSX library not loaded!"); alert("錯誤：無法載入 Excel 處理函式庫，匯入/匯出功能將無法使用。"); }
-             if (typeof Sortable === 'undefined') { console.error("SortableJS library not loaded!"); alert("錯誤：無法載入拖曳排序函式庫，座位表將無法拖曳。"); }
-             if (typeof FileSaver === 'undefined') { console.error("FileSaver library not loaded!"); alert("錯誤：無法載入檔案儲存函式庫，部分匯出功能可能受影響。"); }
-
+            if (typeof XLSX === 'undefined') { alert("錯誤：無法載入 Excel 函式庫。"); }
+            if (typeof Sortable === 'undefined') { alert("錯誤：無法載入拖曳排序函式庫。"); }
+            if (typeof FileSaver === 'undefined') { alert("錯誤：無法載入檔案儲存函式庫。"); }
             window.classroomManager = new ClassroomSeatingManager();
+
+            // --- NEW: Mascot Interaction Logic ---
+            const mascotElement = document.getElementById('mascot');
+            if (mascotElement) {
+                function createParticle(x, y) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    document.body.appendChild(particle);
+
+                    const size = Math.floor(Math.random() * 10 + 5);
+                    const colors = ['#06b6d4', '#3b82f6', '#8b5cf6', '#f97316', '#ec4899', '#10b981', '#7c3aed']; // cyan, blue, purple, orange, pink, teal, violet
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    particle.style.width = `${size}px`;
+                    particle.style.height = `${size}px`;
+                    particle.style.background = color;
+                    particle.style.left = `${x - size / 2}px`;
+                    particle.style.top = `${y - size / 2}px`;
+
+                    const destinationX = (Math.random() - 0.5) * 300;
+                    const destinationY = (Math.random() - 0.5) * 300;
+                    const rotation = Math.random() * 520;
+                    
+                    requestAnimationFrame(() => {
+                        particle.style.transform = `translate(${destinationX}px, ${destinationY}px) rotate(${rotation}deg)`;
+                        particle.style.opacity = '0';
+                    });
+                    
+                    setTimeout(() => {
+                        particle.remove();
+                    }, 1000);
+                }
+
+                mascotElement.addEventListener('click', (e) => {
+                    for (let i = 0; i < 30; i++) {
+                        createParticle(e.clientX, e.clientY);
+                    }
+                });
+            }
         });
     </script>
 </body>
