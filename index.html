@@ -5,288 +5,357 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>教室座位神管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SortableJS -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <!-- FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- XLSX Library -->
+    <!-- XLSX: 用於匯入 -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- DOCX: 用於匯出 Word -->
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <!-- html2canvas: 用於匯出圖片 -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <!-- DragDropTouch: 手機支援 -->
+    <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
-        :root { --desk-min-height: 70px; --desk-width: 95px; }
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; font-size: 14px; }
-        .desk { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: grab; position: relative; border: 1px solid #cbd5e1; border-radius: 0.375rem; min-height: var(--desk-min-height); width: var(--desk-width); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0.3rem; box-sizing: border-box; margin: 3px; background-color: white; overflow: visible; user-select: none; }
-        .desk:hover:not(.sortable-ghost):not(.sortable-drag) { transform: translateY(-2px); box-shadow: 0 6px 10px -3px rgba(0, 0, 0, 0.1); z-index: 10; }
-        .desk.sortable-chosen { cursor: grabbing !important; }
-        .desk.sortable-ghost { opacity: 0.4; background-color: #a5f3fc !important; border: 2px dashed #0891b2 !important; }
-        .desk.sortable-drag { opacity: 0.7; box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.2); z-index: 50 !important; }
+        
+        :root { --desk-min-height: 85px; --desk-width: 110px; }
+        
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; font-size: 14px; overflow-x: hidden; }
+        
+        /* Desk Styles */
+        .desk { transition: all 0.2s ease; cursor: grab; position: relative; border: 1px solid #cbd5e1; border-radius: 0.375rem; min-height: var(--desk-min-height); width: var(--desk-width); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0.4rem; box-sizing: border-box; margin: 3px; background-color: white; overflow: visible; user-select: none; }
+        .desk:hover { transform: translateY(-2px); box-shadow: 0 6px 10px -3px rgba(0, 0, 0, 0.1); z-index: 10; }
+        
+        /* Drag Styles */
+        .desk.sortable-ghost { opacity: 0.3; background-color: #e2e8f0 !important; border: 2px dashed #94a3b8 !important; }
+        .desk.sortable-drag { opacity: 1; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); z-index: 9999 !important; transform: scale(1.05); cursor: grabbing; }
+        .desk.is-dragging-source { opacity: 0.4; border: 2px dashed #9ca3af; }
+        .desk.drag-over-target { border: 2px solid #f87171 !important; background-color: #fef2f2 !important; transform: scale(1.05); box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); z-index: 50; }
+        #waitingBench.drag-over-target { background-color: #dbeafe !important; border-color: #3b82f6 !important; }
+
+        /* Locked Desk Style */
+        .desk.is-locked { border: 2px solid #f59e0b !important; background-color: #fffbeb; cursor: not-allowed !important; }
+        .lock-btn { position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; color: #9ca3af; cursor: pointer; z-index: 20; display: flex; align-items: center; justify-content: center; transition: color 0.2s; font-size: 11px; }
+        .desk:hover .lock-btn { color: #6b7280; }
+        .desk.is-locked .lock-btn { color: #f59e0b; }
+
+        /* Waiting Bench */
+        #waitingBench { min-height: 80px; background-color: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 0.5rem; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; align-items: center; transition: background-color 0.3s; }
+        
+        /* Layout & Objects */
         .classroom-object { background-color: #a8a29e; border: 2px solid #78716c; color: white; font-weight: 500; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; }
         .blackboard { height: 45px; font-size: 0.9em; }
         .teacher-desk-object { height: 35px; width: 90px; background-color: #7c3aed; border-color: #5b21b6; font-size: 0.9em; }
+        
         #seatingChart.mode-traditional { display: grid; gap: 6px; justify-content: center; padding: 5px; }
-        .mode-traditional .desk:not(.empty-seat) { border-color: #93c5fd; }
+        .mode-traditional .desk:not(.empty-seat):not(.is-locked) { border-color: #93c5fd; }
         .mode-traditional .empty-seat { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; cursor: grab; }
-        #seatingChart.mode-group {
-            display: flex;
-            flex-wrap: wrap; 
-            gap: 12px;
-            justify-content: center;
-            padding: 10px;
-            align-items: flex-start;
-        }
-        .group-container { position: relative; border: 2px dashed #a1a1aa; padding: 5px; padding-top: 28px; border-radius: 0.5rem; display: grid; grid-template-columns: repeat(2, auto); gap: 2px; background-color: rgba(241, 245, 249, 0.6); align-content: start; min-height: 100px; cursor: move; width: fit-content; height: fit-content; margin: 5px; transition: box-shadow 0.2s ease; }
-        .group-container.sortable-chosen { border-style: solid !important; border-color: #60a5fa !important; box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important; cursor: grabbing !important; }
-        .group-container.sortable-ghost { opacity: 0.5 !important; background-color: #e0f2fe !important; border: 2px solid #3b82f6 !important; }
-        .group-container.sortable-drag { z-index: 60 !important; }
-        .mode-group .empty-seat { background-color: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; cursor: grab; }
+        
+        #seatingChart.mode-group { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; padding: 10px; align-items: flex-start; }
+        
+        /* Group Container */
+        .group-container { position: relative; border: 2px dashed #a1a1aa; padding: 5px; padding-top: 28px; border-radius: 0.5rem; display: grid; grid-template-columns: repeat(2, auto); gap: 4px; background-color: rgba(241, 245, 249, 0.6); align-content: start; min-height: 100px; width: fit-content; height: fit-content; margin: 5px; transition: box-shadow 0.2s ease; cursor: move; }
+        .group-container.sortable-ghost { opacity: 0.5; background: #e0e7ff; border: 2px dashed #6366f1; }
+        
+        /* Group UI */
         .group-name-container { position: absolute; top: 3px; left: 5px; right: 25px; display: flex; align-items: center; height: 20px; }
         .group-name-display { font-size: 11px; font-weight: bold; color: #4b5563; padding: 1px 4px; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; background-color: rgba(255,255,255,0.6); transition: background-color 0.2s; min-height: 16px; }
         .group-name-display:hover { background-color: rgba(255,255,255,0.9); }
         .group-name-input { font-size: 11px; padding: 0px 3px; border: 1px solid #ccc; border-radius: 3px; width: 100%; height: 18px; box-sizing: border-box; outline: none; display: none; }
         .group-name-display.editing { display: none; }
         .group-name-input.editing { display: block; }
-        .delete-seat-btn { position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background-color: #f87171; color: white; border-radius: 50%; font-size: 9px; line-height: 14px; text-align: center; cursor: pointer; opacity: 0; transition: opacity 0.2s, background-color 0.2s; z-index: 15; display: block; pointer-events: none; }
+        
+        /* Buttons */
+        .delete-seat-btn { position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background-color: #f87171; color: white; border-radius: 50%; font-size: 9px; line-height: 14px; text-align: center; cursor: pointer; opacity: 0; transition: opacity 0.2s; z-index: 15; pointer-events: none; }
         .mode-group .empty-seat:hover .delete-seat-btn { opacity: 0.8; pointer-events: auto; }
         .delete-seat-btn:hover { background-color: #ef4444; opacity: 1; }
-        .delete-group-btn { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; background-color: #ef4444; color: white; border-radius: 3px; font-size: 10px; line-height: 18px; text-align: center; cursor: pointer; opacity: 0.7; transition: opacity 0.2s, background-color 0.2s; z-index: 25; display: flex; align-items: center; justify-content: center; }
+        .delete-group-btn { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; background-color: #ef4444; color: white; border-radius: 3px; font-size: 10px; line-height: 18px; text-align: center; cursor: pointer; opacity: 0.7; z-index: 25; display: flex; align-items: center; justify-content: center; }
         .delete-group-btn:hover { opacity: 1; background-color: #dc2626; }
-        .gender-visible .male { border-left: 4px solid #60a5fa; background-color: #f0f9ff; }
-        .gender-visible .female { border-left: 4px solid #f472b6; background-color: #fdf4ff; }
-        .gender-symbol { font-size: 0.9em; margin-left: 3px; font-weight: bold; }
+        
+        /* --- DYNAMIC DISPLAY STYLES (Controlled by JS Classes on #classroomLayout) --- */
+        
+        /* 1. GENDER COLOR */
+        /* Default (Hidden) */
+        .desk.male, .desk.female { background-color: white; border-left: 1px solid #cbd5e1; }
+        /* Visible */
+        .view-style-gender-color .male { border-left: 4px solid #60a5fa; background-color: #f0f9ff; }
+        .view-style-gender-color .female { border-left: 4px dashed #f472b6; background-color: #fdf4ff; }
+
+        /* 2. GENDER SYMBOL */
+        .gender-symbol { display: none; font-size: 0.9em; margin-left: 3px; font-weight: bold; }
+        .view-style-gender-symbol .gender-symbol { display: inline; }
         .male .gender-symbol { color: #3b82f6; }
         .female .gender-symbol { color: #ec4899; }
-        .needs-icon { position: absolute; top: 3px; right: 3px; font-size: 0.75rem; color: #64748b; background-color: rgba(255, 255, 255, 0.7); padding: 1px 2px; border-radius: 3px; z-index: 15; cursor: help; }
-        .tooltip { visibility: hidden; width: max-content; max-width: 140px; background-color: #334155; color: #fff; text-align: center; border-radius: 4px; padding: 4px 7px; position: absolute; z-index: 99; bottom: 105%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 0.7rem; white-space: normal; word-wrap: break-word; pointer-events: none; }
+
+        /* 3. NEEDS (REQUIREMENT: Show text on screen/image if toggled) */
+        .desk-needs-display { display: none; font-size: 0.7rem; color: #475569; margin-top: 2px; text-align: center; width: 100%; word-wrap: break-word; line-height: 1.1; background-color: rgba(255,255,255,0.5); border-radius: 2px; }
+        .view-style-needs .desk-needs-display { display: block; }
+        /* Tooltip Icon */
+        .needs-icon { display: block; position: absolute; bottom: 3px; right: 3px; font-size: 0.85rem; color: #64748b; background-color: rgba(255, 255, 255, 0.7); padding: 1px 2px; border-radius: 3px; z-index: 15; cursor: help; }
+        .tooltip { visibility: hidden; width: max-content; max-width: 140px; background-color: #334155; color: #fff; text-align: center; border-radius: 4px; padding: 4px 7px; position: absolute; z-index: 99; bottom: 105%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 0.7rem; pointer-events: none; word-wrap: break-word; }
         .needs-icon:hover .tooltip { visibility: visible; opacity: 1; }
-        .student-info { display: flex; flex-direction: column; align-items: center; width: 100%; text-align: center; }
-        .student-name-line { font-semibold text-gray-800 truncate; width: 100%; margin-bottom: 1px;}
-        .desk-needs-print { display: none; font-size: 0.65rem; color: #475569; margin-top: 1px; text-align: center; width: 100%; word-wrap: break-word; }
+
+        /* 4. EMPTY SEATS */
+        .view-style-hide-empty .empty-seat { visibility: hidden; border-color: transparent !important; background-color: transparent !important; pointer-events: none; }
+        .view-style-hide-empty .group-container.all-empty { display: none; } /* JS helper for empty groups */
+
+        /* 5. GROUP NAMES */
+        .view-style-hide-group-names .group-name-container { display: none; }
+
+        /* 6. ANONYMOUS */
+        .name-full { display: inline; }
+        .name-anon { display: none; }
+        .view-style-anonymous .name-full { display: none; }
+        .view-style-anonymous .name-anon { display: inline; }
+
+        /* General Text Info */
+        .student-info { display: flex; flex-direction: column; align-items: center; width: 100%; text-align: center; justify-content: center; height: 100%; }
+        .student-name-line { 
+            font-weight: 600; 
+            font-size: 1.1em; 
+            color: #1f2937; 
+            width: 100%; 
+            margin-bottom: 2px; 
+            white-space: nowrap; 
+            overflow: visible; 
+            line-height: 1.3;
+        }
+
         .controls-section { padding: 1rem; }
-        .controls-section h2 { margin-bottom: 0.75rem; }
-        .controls-section .grid { margin-bottom: 1rem; }
         @media (min-width: 1024px) { #controls-column { max-height: calc(100vh - 70px - 50px); overflow-y: auto; scrollbar-width: thin; } }
 
-        /* --- NEW: Mascot Styles --- */
-        #mascot {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 120px;
-            height: auto;
-            cursor: pointer;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 999;
-        }
-        #mascot:hover {
-            transform: scale(1.15) rotate(-8deg);
-            animation: mascot-shake 0.5s infinite alternate;
-        }
-        .particle {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 1001; /* Above other elements */
-            transition: transform 1s ease-out, opacity 1s ease-out;
-        }
-        @keyframes mascot-shake {
-            0% { transform: scale(1.15) rotate(-8deg); }
-            100% { transform: scale(1.15) rotate(8deg); }
-        }
-        @media (max-width: 768px) {
-            #mascot {
-                width: 80px;
-                bottom: 15px;
-                left: 15px;
-            }
-        }
+        /* Mascot */
+        #mascot { position: fixed; bottom: 20px; left: 20px; width: 100px; height: auto; cursor: move; transition: transform 0.1s; z-index: 999; touch-action: none; }
+        #mascot:hover { filter: brightness(1.1); }
+        .particle { position: fixed; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; z-index: 1001; transition: transform 1s ease-out, opacity 1s ease-out; }
 
-        @media print {
-            .no-print { display: none !important; }
-            body { background-color: white; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            #preview-column { grid-column: span 3 / span 3 !important; }
-            #classroomLayout { padding: 0; margin: 0; box-shadow: none; border: none; background-color: white !important; }
-            #seatingChartWrapper { overflow: visible !important; }
-            #seatingChart { gap: 2px !important; background-color: white !important; box-shadow: none !important; flex-wrap: wrap !important; }
-            .desk { break-inside: avoid; box-shadow: none !important; border: 1px solid #666 !important; min-height: 55px !important; width: 75px !important; margin: 1px !important; padding: 0.2rem !important; font-size: 0.65rem !important; overflow: hidden !important; background-color: white !important; }
-            .classroom-object { border: 1px solid #000 !important; height: 30px !important; background-color: #ccc !important; color: #000 !important;}
-            .blackboard { height: 40px !important; }
-            .group-container { border: 1px solid #999 !important; padding: 2px !important; padding-top: 18px !important; gap: 1px !important; display: grid !important; grid-template-columns: repeat(2, auto) !important; width: auto !important; height: auto !important; break-inside: avoid !important; background-color: white !important; margin: 1px !important; }
-            .group-name-container { top: 1px !important; left: 2px !important; right: 2px !important; }
-            .group-name-display { font-size: 8pt !important; background: none !important; cursor: default !important; font-weight: bold; color: #000 !important;}
-            .group-name-input { display: none !important; }
-            .delete-seat-btn, .delete-group-btn { display: none !important; }
-            .tooltip, .gender-symbol { display: none !important; }
-            .needs-icon { display: none !important; }
-            .desk-needs-print { display: block !important; color: #000 !important; margin-top: 1px !important; }
-            #printClassName { display: block !important; text-align: center; font-size: 1.5em; font-weight: bold; margin-bottom: 1em; }
-            #webClassName { display: none !important; }
-            .student-name-line { font-size: 0.8rem; }
-            .print-hide-needs .desk-needs-print { display: none !important; }
-            .print-hide-empty .empty-seat { visibility: hidden !important; border-color: transparent !important; background-color: transparent !important; }
-            .print-hide-empty .group-container.print-empty-group { display: none !important; }
-            .male { border-left: 3px solid #000 !important; background-color: #fff !important; }
-            .female { border-left: 3px dotted #000 !important; background-color: #fff !important; }
-            .print-hide-gender .male, .print-hide-gender .female { border-left: none !important; }
-            .print-hide-group-names .group-name-container { display: none !important; }
-            .print-hide-group-names .group-container { padding-top: 2px !important; }
-         }
+        /* No Print Utility */
+        .no-print { } /* Used by JS to filter html2canvas */
     </style>
 </head>
 <body class="text-gray-800 min-h-screen flex flex-col">
-    <header class="bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-5 shadow-lg no-print">
-        <div class="container mx-auto px-4">
-            <h1 class="text-2xl md:text-3xl font-bold text-center">教室座位神管理系統</h1>
-            <p class="text-center mt-1 text-blue-100 text-sm">靈活神安排*視覺神管理</p>
+    <header class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-4 shadow-lg no-print">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="mb-3 md:mb-0 text-center md:text-left flex items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold">教室座位神管理系統 <span class="text-yellow-300 text-sm italic">Pro</span></h1>
+                    <p class="text-blue-100 text-xs">靈活神安排*視覺神管理</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="undoBtn" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full w-8 h-8 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition" title="復原 (Ctrl+Z)">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button id="redoBtn" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full w-8 h-8 flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition" title="重做 (Ctrl+Y)">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button id="saveProjectBtn" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded text-sm flex items-center shadow"><i class="fas fa-save mr-1"></i> 儲存專案</button>
+                <label for="loadProjectInput" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded text-sm flex items-center shadow cursor-pointer">
+                    <i class="fas fa-folder-open mr-1"></i> 讀取專案
+                    <input type="file" id="loadProjectInput" accept=".json" class="hidden">
+                </label>
+            </div>
         </div>
     </header>
 
     <main class="container mx-auto px-2 md:px-4 py-4 print-container flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div id="controls-column" class="lg:col-span-1 space-y-6 no-print">
+        <!-- CONTROLS COLUMN -->
+        <div id="controls-column" class="lg:col-span-1 space-y-5 no-print">
             <div class="bg-white rounded-lg shadow-md controls-section">
-                <h2 class="text-lg font-bold text-gray-800">基本設定</h2>
+                <h2 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2">基本設定</h2>
                 <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium text-sm" for="classNameInput">班級名稱</label>
-                    <input type="text" id="classNameInput" class="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="例如：神來一班">
+                    <label class="block text-gray-700 mb-1 font-medium text-sm">班級名稱</label>
+                    <input type="text" id="classNameInput" class="w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="例如：神來一班">
                 </div>
-                <div class="mb-4 border-t pt-4">
+                <div class="mb-4">
                     <label class="block text-gray-700 mb-1 font-medium text-sm">座位模式</label>
-                    <div class="flex gap-4 text-sm">
-                        <label class="inline-flex items-center"><input type="radio" class="form-radio text-blue-600 h-4 w-4" name="seatingMode" value="traditional" checked><span class="ml-1">傳統座位</span></label>
-                        <label class="inline-flex items-center"><input type="radio" class="form-radio text-green-600 h-4 w-4" name="seatingMode" value="group"><span class="ml-1">小組座位</span></label>
+                    <div class="flex gap-4 text-sm bg-gray-50 p-2 rounded">
+                        <label class="inline-flex items-center cursor-pointer"><input type="radio" class="form-radio text-blue-600 h-4 w-4" name="seatingMode" value="traditional" checked><span class="ml-1">傳統矩陣</span></label>
+                        <label class="inline-flex items-center cursor-pointer"><input type="radio" class="form-radio text-green-600 h-4 w-4" name="seatingMode" value="group"><span class="ml-1">分組座位</span></label>
                     </div>
                 </div>
-                <div id="traditionalInputs" class="grid grid-cols-2 gap-4 mb-4">
-                    <div><label class="block text-gray-700 mb-1 font-medium text-sm" for="rows">座位列數</label><input type="number" id="rows" min="1" max="20" value="4" class="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"></div>
-                    <div><label class="block text-gray-700 mb-1 font-medium text-sm" for="cols">每列座位數</label><input type="number" id="cols" min="1" max="20" value="6" class="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"></div>
+                <div id="traditionalInputs" class="grid grid-cols-2 gap-4 mb-2">
+                    <div><label class="text-gray-700 font-medium text-xs">列數 (直)</label><input type="number" id="rows" min="1" max="20" value="4" class="w-full px-3 py-1 border rounded text-sm"></div>
+                    <div><label class="text-gray-700 font-medium text-xs">行數 (橫)</label><input type="number" id="cols" min="1" max="20" value="6" class="w-full px-3 py-1 border rounded text-sm"></div>
                 </div>
-                <div id="groupInputs" class="grid grid-cols-2 gap-4 mb-4 hidden">
-                     <div><label class="block text-gray-700 mb-1 font-medium text-sm" for="numGroups">初始分組數</label><input type="number" id="numGroups" min="0" max="25" value="5" class="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"></div>
-                     <div><label class="block text-gray-700 mb-1 font-medium text-sm" for="studentsPerGroup">初始/新增座位</label><input type="number" id="studentsPerGroup" min="1" max="12" value="4" class="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"><p class="text-xs text-gray-500 mt-1">新小組預設座位數</p></div>
-                     <div class="col-span-2 mt-2">
-                        <button id="addGroupBtn" title="在座位表中新增一個小組" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300 flex items-center text-sm w-full justify-center"><i class="fas fa-plus-circle mr-1"></i> 新增小組</button>
+                <div id="groupInputs" class="hidden space-y-3">
+                     <div class="grid grid-cols-2 gap-4">
+                         <div><label class="text-gray-700 font-medium text-xs">分組數量</label><input type="number" id="numGroups" min="0" max="25" value="5" class="w-full px-3 py-1 border rounded text-sm"></div>
+                         <div><label class="text-gray-700 font-medium text-xs">每組人數</label><input type="number" id="studentsPerGroup" min="1" max="12" value="4" class="w-full px-3 py-1 border rounded text-sm"></div>
                      </div>
+                     <button id="addGroupBtn" class="bg-green-600 hover:bg-green-700 text-white py-1.5 w-full rounded text-sm shadow-sm"><i class="fas fa-plus-circle mr-1"></i> 新增一個小組</button>
                 </div>
             </div>
 
             <div class="bg-white rounded-lg shadow-md controls-section">
-                 <h2 class="text-lg font-bold text-gray-800">學生名單與匯入</h2>
-                 <div class="grid grid-cols-1 gap-4">
+                 <h2 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2">學生名單與排列</h2>
+                 <div class="space-y-3">
                     <div>
-                        <label class="block text-gray-700 mb-1 font-medium text-sm" for="students">學生名單 (座號 姓名 性別 (選填)需求)</label>
-                        <textarea id="students" rows="5" class="w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="1 公小民 男 需要提醒
-2 邱小瑜 女 沉癮AI無法自拔
+                        <textarea id="students" rows="5" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 text-sm font-mono leading-tight" placeholder="1 公小民 男 需要提醒&#10;2 邱小瑜 女 沉癮AI無法自拔
 ..."></textarea>
-                        <p class="text-xs text-gray-500 mt-1">每行一位。座號、姓名、性別必填，需求選填。</p>
-                        <div class="flex flex-wrap gap-3 items-center mt-3">
-                            <button id="refreshStudentListBtn" title="重新讀取上方名單，更新現有座位上的學生資訊，並將新增學生放入空位 (不改變現有學生位置)" class="bg-teal-600 hover:bg-teal-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300 flex items-center text-sm"><i class="fas fa-sync-alt mr-1"></i> 重新整理</button>
-                            <button id="sequentialArrangeBtn" title="依照學生名單順序排列座位 (將重設分組與位置)" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300 flex items-center text-sm"><i class="fas fa-sort-amount-down mr-1"></i> 順序排列</button>
-                            <button id="randomizeBtn" title="將學生名單隨機打亂後排列座位 (將重設分組與位置)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300 flex items-center text-sm"><i class="fas fa-random mr-1"></i> 隨機排列</button>
-                        </div>
+                        <p class="text-xs text-gray-500 mt-1 flex justify-between">
+                            <span>格式: 座號 姓名 性別 (備註)</span>
+                            <a href="#" id="downloadTemplateBtn" class="text-blue-600 hover:text-blue-800"><i class="fas fa-download"></i> 範例</a>
+                        </p>
                     </div>
-                    <div>
-                        <label class="block text-gray-700 mb-1 font-medium text-sm">Excel 學生名單</label>
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center gap-2"><input type="file" id="excelFile" accept=".xlsx, .xls" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"><button id="importExcelBtn" title="從Excel匯入學生名單 (會覆蓋上方文字區內容並重設分組與座位)" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-2 rounded-md transition duration-300 flex items-center text-xs shrink-0"><i class="fas fa-file-import mr-1"></i> 匯入</button></div>
-                            <a href="#" id="downloadTemplateBtn" class="text-blue-600 hover:text-blue-800 text-xs flex items-center"><i class="fas fa-download mr-1"></i> 下載範例 Excel 檔案</a>
+                    
+                    <div class="flex gap-2">
+                        <button id="refreshStudentListBtn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-1.5 rounded text-sm shadow-sm" title="更新資料但不打亂位置"><i class="fas fa-sync-alt mr-1"></i> 刷新名單</button>
+                        <button id="clearLayoutBtn" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 py-1.5 px-3 rounded text-sm shadow-sm" title="清空座位回到暫存區"><i class="fas fa-trash-alt"></i> 清空座位</button>
+                    </div>
+                    <div class="flex items-center relative w-full">
+                            <input type="file" id="excelFile" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <button class="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 py-1.5 rounded text-sm"><i class="fas fa-file-excel mr-1"></i> 匯入 Excel</button>
+                    </div>
+
+                    <div class="border-t pt-3 mt-2">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="includeBenchInShuffle" class="h-4 w-4 text-indigo-600 rounded border-gray-300">
+                            <label for="includeBenchInShuffle" class="ml-2 text-sm text-gray-700">隨機時包含暫存區學生</label>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">欄位需包含: 座號, 姓名, 性別, (選填)需求</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="sequentialArrangeBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 rounded text-sm shadow-sm"><i class="fas fa-sort-numeric-down mr-1"></i> 依座號排列</button>
+                            <button id="randomizeBtn" class="bg-purple-600 hover:bg-purple-700 text-white py-1.5 rounded text-sm shadow-sm"><i class="fas fa-random mr-1"></i> 隨機排列</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1 text-center">💡 提示：點擊座位右上角 <i class="fas fa-lock text-[10px]"></i> 可鎖定該生</p>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white rounded-lg shadow-md controls-section">
-                <h2 class="text-lg font-bold text-gray-800">顯示與操作設定</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                    <button id="perspectiveToggleBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-medium py-1.5 px-3 rounded-md transition duration-300 flex items-center justify-center text-xs"><i class="fas fa-sync-alt mr-1"></i> 切換視角</button>
-                    <button id="toggleBlackboardBtn" class="bg-stone-500 hover:bg-stone-600 text-white font-medium py-1.5 px-3 rounded-md transition duration-300 flex items-center justify-center text-xs"><i class="fas fa-chalkboard mr-1"></i> 顯示黑板</button>
-                    <button id="toggleTeacherDeskBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-medium py-1.5 px-3 rounded-md transition duration-300 flex items-center justify-center text-xs"><i class="fas fa-person-chalkboard mr-1"></i> 顯示講桌</button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-b pb-4">
-                    <div class="pr-4">
-                        <label class="block text-gray-700 mb-1 font-medium text-sm">拖曳模式 (拖曳學生/空位時)</label>
-                        <div class="flex flex-col gap-1 text-sm">
-                            <label class="inline-flex items-center font-normal"><input type="radio" class="form-radio text-indigo-600 h-4 w-4" name="dragMode" value="insert" checked><span class="ml-1">插入/移動</span></label>
-                            <label class="inline-flex items-center font-normal"><input type="radio" class="form-radio text-red-600 h-4 w-4" name="dragMode" value="swap"><span class="ml-1">交換位置</span></label>
+                <h2 class="text-lg font-bold text-gray-800 mb-2">顯示與匯出設定</h2>
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <button id="perspectiveToggleBtn" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-1.5 rounded text-xs"><i class="fas fa-sync-alt mr-1"></i> 切換視角</button>
+                        <button id="toggleBlackboardBtn" class="flex-1 bg-stone-500 hover:bg-stone-600 text-white py-1.5 rounded text-xs"><i class="fas fa-eye-slash"></i> 黑板</button>
+                        <button id="toggleTeacherDeskBtn" class="flex-1 bg-violet-500 hover:bg-violet-600 text-white py-1.5 rounded text-xs"><i class="fas fa-eye-slash"></i> 講桌</button>
+                    </div>
+                    
+                    <div class="bg-yellow-50 p-2 rounded border border-yellow-200">
+                        <span class="text-xs font-bold text-gray-700 block mb-2"><i class="fas fa-hand-pointer mr-1"></i> 拖曳模式:</span>
+                        <div class="flex flex-col gap-2 text-xs">
+                            <label class="inline-flex items-center cursor-pointer p-1.5 bg-white border border-gray-200 rounded hover:border-red-400 transition-colors">
+                                <input type="radio" name="dragMode" value="swap" class="text-red-600 h-4 w-4" checked>
+                                <div class="ml-2">
+                                    <span class="font-bold text-red-700 block">兩兩互換模式</span>
+                                    <span class="text-gray-500 block">不影響他人座位</span>
+                                </div>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer p-1.5 bg-white border border-gray-200 rounded hover:border-indigo-400 transition-colors">
+                                <input type="radio" name="dragMode" value="insert" class="text-indigo-600 h-4 w-4">
+                                <div class="ml-2">
+                                    <span class="font-bold text-indigo-700 block">遞補順延模式</span>
+                                    <span class="text-gray-500 block">會影響他人座位</span>
+                                </div>
+                            </label>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">插入: 將學生/空位插入目標。交換: 與目標位置學生互換 (若目標為空則同插入)。</p>
                     </div>
-                    <div>
-                        <label class="block text-gray-700 mb-1 font-medium text-sm">網頁顯示選項</label>
-                        <div class="flex items-center mt-1 text-sm"><input type="checkbox" id="showGenderCheckbox" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded mr-1" checked><label for="showGenderCheckbox" class="text-gray-700">顯示性別區別</label></div>
 
-                        <label class="block text-gray-700 mt-2 mb-1 font-medium text-sm">列印選項</label>
-                        <div class="flex items-center mt-1 text-sm"><input type="checkbox" id="printNeedsCheckbox" class="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded mr-1" checked><label for="printNeedsCheckbox" class="text-gray-700">列印需求註記</label></div>
-                        <div class="flex items-center mt-1 text-sm"><input type="checkbox" id="printGenderCheckbox" class="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded mr-1" checked><label for="printGenderCheckbox" class="text-gray-700">列印性別區別</label></div>
-                         <div class="flex items-center mt-1 text-sm"><input type="checkbox" id="printEmptySeatsCheckbox" class="h-4 w-4 text-slate-600 focus:ring-slate-500 border-gray-300 rounded mr-1" checked><label for="printEmptySeatsCheckbox" class="text-gray-700">列印空位標示</label></div>
-                         <div class="flex items-center mt-1 text-sm"><input type="checkbox" id="printGroupNamesCheckbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-1" checked><label for="printGroupNamesCheckbox" class="text-gray-700">列印小組名稱</label></div>
+                    <div class="grid grid-cols-2 gap-y-1 gap-x-2 text-xs">
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="showGenderColorCheckbox" checked class="text-pink-600 rounded mr-1">顯示性別色塊</label>
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="showNeedsCheckbox" checked class="text-cyan-600 rounded mr-1">顯示需求註記</label>
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="showGenderSymbolCheckbox" checked class="text-pink-600 rounded mr-1">顯示性別</label>
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="showEmptySeatsCheckbox" checked class="text-slate-600 rounded mr-1">顯示空位</label>
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="showGroupNamesCheckbox" checked class="text-blue-600 rounded mr-1">顯示組名</label>
+                        <label class="inline-flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"><input type="checkbox" id="showAnonymousCheckbox" class="text-gray-600 rounded mr-1">顯示匿名(中間O)</label>
                     </div>
                 </div>
-                <p class="text-xs text-gray-600" id="groupDragInfo">小組模式：可拖曳學生/空位換位，可拖曳整組（點擊小組名稱區域或空白處），可點 <span class="inline-block bg-gray-200 border border-gray-400 rounded-sm w-2 h-2 mx-0.5"></span> 上的 <i class="fas fa-times delete-seat-btn text-[9px] relative" style="display:inline-block; position:relative; opacity:1; background: #f87171; color:white; border-radius:50%; width:10px; height:10px; line-height:10px; top: -5px; right: -2px;"></i> 刪空位，點 <i class="fas fa-trash-alt delete-group-btn text-[9px] relative" style="display:inline-flex; position:relative; opacity:1; background: #ef4444; color:white; border-radius:3px; width:10px; height:10px; align-items:center; justify-content:center;"></i> 刪小組。(刪除操作將直接執行)</p>
-                 <p class="text-xs text-gray-500 mt-1">提示：切換視角在小組模式下會改變講台/黑板位置，並反轉小組和座位顯示順序。</p>
             </div>
         </div>
 
-        <div id="preview-column" class="lg:col-span-2">
-             <div id="classroomLayout" class="bg-gray-100 rounded-lg shadow-inner p-2 md:p-4 classroom-layout relative overflow-x-auto h-full flex flex-col">
-                 <h3 id="printClassName" class="text-center text-xl font-bold mb-4 hidden"></h3>
-                 <h2 id="webClassName" class="text-center text-xl font-bold mb-2 text-gray-700"></h2>
-                 <div class="flex justify-between items-center mb-3 flex-wrap gap-y-1 relative">
-                     <h2 class="text-base md:text-lg text-center font-bold text-gray-800 w-full">座位表</h2>
-                     <div class="flex gap-1.5 no-print absolute top-0 right-0">
-                         <button id="exportLayoutBtn" title="匯出當前座位表佈局為 Excel" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1 px-2 rounded-md transition duration-300 flex items-center text-xs"><i class="fas fa-file-excel mr-1"></i> 匯出</button>
-                         <button id="printBtn" title="列印座位表" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-2 rounded-md transition duration-300 flex items-center text-xs"><i class="fas fa-print mr-1"></i> 列印</button>
+        <!-- PREVIEW COLUMN -->
+        <div id="preview-column" class="lg:col-span-2 h-full flex flex-col">
+             <div id="classroomLayout" class="bg-gray-100 rounded-lg shadow-inner p-2 md:p-4 classroom-layout relative overflow-hidden flex flex-col h-full">
+                 
+                 <!-- Header & Actions -->
+                 <div class="flex justify-between items-start mb-2 relative z-10">
+                     <div class="w-full">
+                        <h3 id="printClassName" class="text-center text-2xl font-bold hidden mb-4"></h3>
+                        <h2 id="webClassName" class="text-center text-xl font-bold text-gray-800 min-h-[1.75rem]"></h2>
+                        <div id="classInfo" class="text-gray-600 text-xs font-medium text-center mt-1"></div>
+                     </div>
+                     <div class="flex gap-2 no-print absolute right-0 top-0">
+                         <button id="exportImageBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm shadow"><i class="fas fa-image mr-1"></i> 匯出 圖片</button>
+                         <button id="exportLayoutBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm shadow"><i class="fas fa-file-word mr-1"></i> 匯出 Word</button>
                      </div>
                  </div>
-                 <div id="classInfo" class="text-gray-600 text-xs font-medium mb-2 text-center"></div>
-                 <div id="classroomObjectsContainerTop" class="mb-2 h-[45px] flex items-center justify-center shrink-0"><div id="blackboardObject" class="classroom-object blackboard hidden w-4/5 max-w-md"><i class="fas fa-chalkboard mr-2"></i> 黑板</div></div>
-                 <div id="teacherDeskContainerTop" class="mb-2 h-[35px] flex items-center justify-center shrink-0"><div id="teacherDeskObject" class="classroom-object teacher-desk-object hidden"><i class="fas fa-person-chalkboard mr-2"></i> 講桌</div></div>
-                 <div id="seatingChartWrapper" class="flex-grow overflow-auto">
-                     <div id="seatingChart" class="min-h-[250px] rounded bg-white shadow-sm pb-4"></div>
+
+                 <!-- Waiting Bench -->
+                 <div id="waitingBenchContainer" class="no-print mb-4 z-10">
+                    <div class="flex items-center justify-between mb-1 px-1">
+                        <span class="text-xs font-bold text-indigo-600"><i class="fas fa-chair mr-1"></i> 暫存區 / 等候區</span>
+                        <span class="text-[10px] text-gray-500">可將學生拖曳至此暫放</span>
+                    </div>
+                    <div id="waitingBench" class="shadow-inner min-h-[60px] p-2 bg-gray-50 rounded border-2 border-dashed border-gray-300 flex flex-wrap gap-2 transition-colors">
+                        <!-- Dynamic items -->
+                    </div>
                  </div>
-                 <div id="teacherDeskContainerBottom" class="mt-2 h-[35px] flex items-center justify-center shrink-0"></div>
-                 <div id="classroomObjectsContainerBottom" class="mt-2 h-[45px] flex items-center justify-center shrink-0"></div>
-                 <div class="mt-4 flex flex-wrap gap-x-3 gap-y-1 justify-center no-print border-t pt-2 text-xs shrink-0">
-                     <span class="font-semibold mr-1">圖例:</span>
-                     <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 border-l-[3px] border-blue-500"></div><span class="text-gray-600">男</span></div>
-                     <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 border-l-[3px] border-pink-500"></div><span class="text-gray-600">女</span></div>
-                     <span class="text-gray-500 text-[10px]">(需啟用顯示)</span>
-                     <div class="flex items-center gap-1"><i class="fas fa-comment-dots needs-icon text-[9px] relative top-0 right-0"></i><span class="text-gray-600">需求(滑鼠懸停)</span></div>
-                     <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 bg-gray-200 border border-gray-400 rounded-sm"></div><span class="text-gray-600">空位</span></div>
-                     <div class="flex items-center gap-1"><i class="fas fa-times delete-seat-btn text-[9px]" style="display:inline-block; position:relative; opacity:1; background: #f87171; color:white; border-radius:50%; width:12px; height:12px; line-height:12px; top:-5px; right:-2px; z-index:1;"></i><span class="text-gray-600">刪空位(組)</span></div>
-                     <div class="flex items-center gap-1"><i class="fas fa-trash-alt delete-group-btn text-[9px]" style="display:inline-flex; position:relative; opacity:1; background: #ef4444; color:white; border-radius:3px; width:12px; height:12px; align-items:center; justify-content:center;"></i><span class="text-gray-600">刪小組</span></div>
-                     <div class="flex items-center gap-1"><i class="fas fa-pen-to-square text-blue-500 text-[9px]"></i><span class="text-gray-600">編輯組名</span></div>
+
+                 <!-- Main Layout Area -->
+                 <div class="flex flex-col flex-grow overflow-auto relative z-0">
+                     <div id="classroomObjectsContainerTop" class="mb-2 min-h-[10px] flex items-center justify-center shrink-0 transition-all">
+                        <div id="blackboardObject" class="classroom-object blackboard hidden w-3/4 max-w-md shadow-md"><i class="fas fa-chalkboard mr-2"></i> 黑板</div>
+                     </div>
+                     <div id="teacherDeskContainerTop" class="mb-2 min-h-[10px] flex items-center justify-center shrink-0 transition-all">
+                        <div id="teacherDeskObject" class="classroom-object teacher-desk-object hidden shadow-md"><i class="fas fa-person-chalkboard mr-2"></i> 講桌</div>
+                     </div>
+                     
+                     <div id="seatingChartWrapper" class="flex-grow overflow-auto p-1">
+                         <div id="seatingChart" class="min-h-[300px] rounded bg-white shadow-sm pb-8 transition-all"></div>
+                     </div>
+
+                     <div id="teacherDeskContainerBottom" class="mt-2 min-h-[10px] flex items-center justify-center shrink-0"></div>
+                     <div id="classroomObjectsContainerBottom" class="mt-2 min-h-[10px] flex items-center justify-center shrink-0"></div>
+                 </div>
+
+                 <!-- Legend -->
+                 <div class="mt-2 flex flex-wrap gap-3 justify-center no-print border-t pt-2 text-[11px] text-gray-600 shrink-0">
+                     <span class="font-bold">圖例:</span>
+                     <div class="flex items-center gap-1"><span class="w-2 h-2 bg-blue-100 border-l-2 border-blue-500 border-solid block"></span>男 (實線)</div>
+                     <div class="flex items-center gap-1"><span class="w-2 h-2 bg-pink-50 border-l-2 border-pink-500 border-dashed block"></span>女 (虛線)</div>
+                     <div class="flex items-center gap-1"><i class="fas fa-lock text-yellow-500"></i> 鎖定</div>
+                     <div class="flex items-center gap-1"><i class="fas fa-comment-dots"></i> 需求</div>
+                     <div class="flex items-center gap-1"><span class="w-2 h-2 border border-dashed border-gray-400 block"></span>空位</div>
                  </div>
              </div>
         </div>
     </main>
-    <footer class="bg-gray-800 text-white py-3 no-print mt-auto">
-        <div class="container mx-auto px-4 text-center text-xs">
-            <p>Copyright © Liyuchiutiger Gongminshen</p>
-        </div>
-    </footer>
 
-    <!-- NEW: Mascot Element -->
-    <img id="mascot" src="image/LiyuChillGuy.svg" alt="LiyuChillGuy Mascot" class="no-print">
+    <!-- Draggable Mascot -->
+    <img id="mascot" src="image/LiyuChillGuy.svg" alt="Mascot" class="no-print" draggable="false">
 
     <script>
-        // ... (The entire ClassroomSeatingManager class and initialization logic remains here, unchanged from the version you provided)
         class ClassroomSeatingManager {
             constructor() {
+                this.STORAGE_KEY = 'seating_chart_pro_data';
+                this.historyStack = [];
+                this.historyIndex = -1;
+                this.MAX_HISTORY = 20;
+
                 this.state = {
-                    students: [],
-                    layoutMap: new Map(),
+                    students: [], 
+                    layoutMap: new Map(), 
+                    lockedDeskIds: new Set(),
+                    waitingBench: [],
                     groupNames: {},
                     seatingMode: 'traditional',
                     viewPerspective: 'teacher',
                     showBlackboard: false,
                     showTeacherDesk: false,
-                    dragMode: 'insert',
-                    showGender: true,
-                    printNeeds: true,
-                    printGender: true,
-                    printEmptySeats: true,
-                    printGroupNames: true,
+                    dragMode: 'swap',
+                    // Display Options
+                    showGenderColor: true,
+                    showNeeds: true,
+                    showGenderSymbol: true,
+                    showEmptySeats: true,
+                    showGroupNames: true,
+                    showAnonymous: false,
+                    includeBenchInShuffle: false,
                     className: '',
                     rows: 4,
                     cols: 6,
@@ -295,22 +364,42 @@
                 };
                 this.sortableInstances = [];
                 this.nextGroupId = 0;
-                this.elements = this.getDOMElements();
                 this.xlsx = XLSX;
-                this.tempPrintClasses = { emptyGroups: new Set() };
+                this.elements = this.getDOMElements();
+                
+                this.handleNativeDragStart = this.handleNativeDragStart.bind(this);
+                this.handleNativeDragOver = this.handleNativeDragOver.bind(this);
+                this.handleNativeDragLeave = this.handleNativeDragLeave.bind(this);
+                this.handleNativeDrop = this.handleNativeDrop.bind(this);
+                this.handleNativeDragEnd = this.handleNativeDragEnd.bind(this);
+                this.currentDragSourceId = null;
+                this.currentDragSourceType = null;
+
                 this.bindEventListeners();
-                this.initialize();
+                this.initMascotDrag();
+                
+                if (this.loadFromLocalStorage()) {
+                    this.saveStateToHistory(); 
+                } else {
+                    this.initializeDefault();
+                    this.saveStateToHistory();
+                }
+                this.updateUndoRedoButtons();
             }
 
             getDOMElements() {
                 return {
+                    saveProjectBtn: document.getElementById('saveProjectBtn'),
+                    loadProjectInput: document.getElementById('loadProjectInput'),
                     sequentialArrangeBtn: document.getElementById('sequentialArrangeBtn'),
                     randomizeBtn: document.getElementById('randomizeBtn'),
                     refreshStudentListBtn: document.getElementById('refreshStudentListBtn'),
-                    printBtn: document.getElementById('printBtn'),
+                    clearLayoutBtn: document.getElementById('clearLayoutBtn'),
+                    undoBtn: document.getElementById('undoBtn'),
+                    redoBtn: document.getElementById('redoBtn'),
                     downloadTemplateBtn: document.getElementById('downloadTemplateBtn'),
-                    importExcelBtn: document.getElementById('importExcelBtn'),
                     exportLayoutBtn: document.getElementById('exportLayoutBtn'),
+                    exportImageBtn: document.getElementById('exportImageBtn'),
                     perspectiveToggleBtn: document.getElementById('perspectiveToggleBtn'),
                     toggleBlackboardBtn: document.getElementById('toggleBlackboardBtn'),
                     toggleTeacherDeskBtn: document.getElementById('toggleTeacherDeskBtn'),
@@ -322,17 +411,22 @@
                     numGroupsInput: document.getElementById('numGroups'),
                     studentsPerGroupInput: document.getElementById('studentsPerGroup'),
                     studentsTextarea: document.getElementById('students'),
-                    showGenderCheckbox: document.getElementById('showGenderCheckbox'),
-                    printNeedsCheckbox: document.getElementById('printNeedsCheckbox'),
-                    printGenderCheckbox: document.getElementById('printGenderCheckbox'),
-                    printEmptySeatsCheckbox: document.getElementById('printEmptySeatsCheckbox'),
-                    printGroupNamesCheckbox: document.getElementById('printGroupNamesCheckbox'),
+                    // Display Checkboxes
+                    showGenderColorCheckbox: document.getElementById('showGenderColorCheckbox'),
+                    showNeedsCheckbox: document.getElementById('showNeedsCheckbox'),
+                    showGenderSymbolCheckbox: document.getElementById('showGenderSymbolCheckbox'),
+                    showEmptySeatsCheckbox: document.getElementById('showEmptySeatsCheckbox'),
+                    showGroupNamesCheckbox: document.getElementById('showGroupNamesCheckbox'),
+                    showAnonymousCheckbox: document.getElementById('showAnonymousCheckbox'),
+                    includeBenchInShuffle: document.getElementById('includeBenchInShuffle'),
+                    
                     printClassName: document.getElementById('printClassName'),
                     webClassName: document.getElementById('webClassName'),
                     traditionalInputsDiv: document.getElementById('traditionalInputs'),
                     groupInputsDiv: document.getElementById('groupInputs'),
                     classroomLayout: document.getElementById('classroomLayout'),
                     seatingChart: document.getElementById('seatingChart'),
+                    waitingBench: document.getElementById('waitingBench'),
                     classInfo: document.getElementById('classInfo'),
                     blackboardObject: document.getElementById('blackboardObject'),
                     teacherDeskObject: document.getElementById('teacherDeskObject'),
@@ -340,596 +434,710 @@
                     teacherDeskContainerBottom: document.getElementById('teacherDeskContainerBottom'),
                     classroomObjectsContainerTop: document.getElementById('classroomObjectsContainerTop'),
                     classroomObjectsContainerBottom: document.getElementById('classroomObjectsContainerBottom'),
-                    groupDragInfo: document.getElementById('groupDragInfo'),
-                    seatingChartWrapper: document.getElementById('seatingChartWrapper'),
                     body: document.body,
                 };
             }
 
             bindEventListeners() {
-                this.elements.sequentialArrangeBtn.addEventListener('click', () => this.arrangeSeats(false));
-                this.elements.randomizeBtn.addEventListener('click', () => this.arrangeSeats(true));
-                this.elements.refreshStudentListBtn.addEventListener('click', () => this.refreshStudentDataAndUpdateDesks());
+                this.elements.saveProjectBtn.addEventListener('click', () => this.saveProjectToFile());
+                this.elements.loadProjectInput.addEventListener('change', (e) => this.loadProjectFromFile(e));
+                
+                this.elements.sequentialArrangeBtn.addEventListener('click', () => { this.saveStateToHistory(); this.arrangeSeats(false); });
+                this.elements.randomizeBtn.addEventListener('click', () => { this.saveStateToHistory(); this.arrangeSeats(true); });
+                this.elements.refreshStudentListBtn.addEventListener('click', () => { this.saveStateToHistory(); this.refreshStudentData(); });
+                this.elements.clearLayoutBtn.addEventListener('click', () => { 
+                    if(confirm('確定要清空座位表嗎？所有學生將回到暫存區。')) { 
+                        this.saveStateToHistory(); 
+                        this.clearSeatingLayout(); 
+                    } 
+                });
+                this.elements.undoBtn.addEventListener('click', () => this.undo());
+                this.elements.redoBtn.addEventListener('click', () => this.redo());
+                
                 this.elements.downloadTemplateBtn.addEventListener('click', (e) => this.generateExcelTemplate(e));
-                this.elements.importExcelBtn.addEventListener('click', () => this.importStudentsFromExcel());
+                this.elements.excelFile.addEventListener('change', (e) => { this.saveStateToHistory(); this.importStudentsFromExcel(e); });
                 this.elements.exportLayoutBtn.addEventListener('click', () => this.exportSeatingLayout());
-                this.elements.printBtn.addEventListener('click', () => this.handlePrint());
-                this.elements.perspectiveToggleBtn.addEventListener('click', () => this.togglePerspective());
-                this.elements.toggleBlackboardBtn.addEventListener('click', () => this.toggleClassroomBlackboard());
-                this.elements.toggleTeacherDeskBtn.addEventListener('click', () => this.toggleClassroomTeacherDesk());
-                this.elements.showGenderCheckbox.addEventListener('change', () => this.toggleGenderDisplay());
-                this.elements.printNeedsCheckbox.addEventListener('change', () => this.togglePrintNeeds());
-                this.elements.printGenderCheckbox.addEventListener('change', () => this.togglePrintGender());
-                this.elements.printEmptySeatsCheckbox.addEventListener('change', () => this.togglePrintEmptySeats());
-                this.elements.printGroupNamesCheckbox.addEventListener('change', () => this.togglePrintGroupNames());
-                this.elements.classNameInput.addEventListener('input', () => this.updateClassName());
-                this.elements.addGroupBtn.addEventListener('click', () => this.addNewGroup());
-
-                document.querySelectorAll('input[name="seatingMode"]').forEach(radio => {
-                    radio.addEventListener('change', (e) => this.handleModeChange(e.target.value));
+                this.elements.exportImageBtn.addEventListener('click', () => this.exportLayoutImage());
+                
+                this.elements.perspectiveToggleBtn.addEventListener('click', () => { this.togglePerspective(); this.saveToLocalStorage(); });
+                this.elements.toggleBlackboardBtn.addEventListener('click', () => { this.state.showBlackboard = !this.state.showBlackboard; this.updateUIState(); this.renderClassroomObjects(); this.saveToLocalStorage(); });
+                this.elements.toggleTeacherDeskBtn.addEventListener('click', () => { this.state.showTeacherDesk = !this.state.showTeacherDesk; this.updateUIState(); this.renderClassroomObjects(); this.saveToLocalStorage(); });
+                this.elements.includeBenchInShuffle.addEventListener('change', () => { this.state.includeBenchInShuffle = this.elements.includeBenchInShuffle.checked; this.saveToLocalStorage(); });
+                
+                // Display Toggles (Updates State & UI immediately)
+                const bindToggle = (elem, key) => {
+                    elem.addEventListener('change', () => {
+                        this.state[key] = elem.checked;
+                        this.updateDisplayOptions();
+                        this.saveToLocalStorage();
+                    });
+                };
+                bindToggle(this.elements.showGenderColorCheckbox, 'showGenderColor');
+                bindToggle(this.elements.showNeedsCheckbox, 'showNeeds');
+                bindToggle(this.elements.showGenderSymbolCheckbox, 'showGenderSymbol');
+                bindToggle(this.elements.showEmptySeatsCheckbox, 'showEmptySeats');
+                bindToggle(this.elements.showGroupNamesCheckbox, 'showGroupNames');
+                bindToggle(this.elements.showAnonymousCheckbox, 'showAnonymous');
+                
+                this.elements.classNameInput.addEventListener('input', () => { this.updateClassName(); this.saveToLocalStorage(); });
+                this.elements.studentsTextarea.addEventListener('change', () => this.saveToLocalStorage());
+                this.elements.addGroupBtn.addEventListener('click', () => { this.saveStateToHistory(); this.addNewGroup(); this.saveToLocalStorage(); });
+                
+                document.querySelectorAll('input[name="seatingMode"]').forEach(radio => { 
+                    radio.addEventListener('change', (e) => { 
+                        this.saveStateToHistory();
+                        this.handleModeChange(e.target.value); 
+                    }); 
                 });
-                document.querySelectorAll('input[name="dragMode"]').forEach(radio => {
-                    radio.addEventListener('change', (e) => this.state.dragMode = e.target.value);
+                document.querySelectorAll('input[name="dragMode"]').forEach(radio => { 
+                    radio.addEventListener('change', (e) => { 
+                        this.state.dragMode = e.target.value; 
+                        this.renderSeatingChart(); 
+                        this.renderWaitingBench(); 
+                        this.saveToLocalStorage(); 
+                    }); 
                 });
-                [this.elements.rowsInput, this.elements.colsInput, this.elements.numGroupsInput, this.elements.studentsPerGroupInput].forEach(input => {
-                    input.addEventListener('change', () => this.updateConfigFromInputsAndRender());
+                
+                [this.elements.rowsInput, this.elements.colsInput, this.elements.numGroupsInput, this.elements.studentsPerGroupInput].forEach(input => { 
+                    input.addEventListener('change', () => { 
+                        this.saveStateToHistory();
+                        this.updateConfigFromInputsAndRender(); 
+                        this.saveToLocalStorage(); 
+                    }); 
                 });
-
-                 this.elements.seatingChartWrapper.addEventListener('click', (e) => {
-                    const deleteSeatBtn = e.target.closest('.delete-seat-btn');
-                    const deleteGroupBtn = e.target.closest('.delete-group-btn');
-                    const groupNameDisplay = e.target.closest('.group-name-display');
-
-                    if (deleteSeatBtn) this.handleDeleteSeat(deleteSeatBtn);
-                    else if (deleteGroupBtn) this.handleDeleteGroup(deleteGroupBtn);
-                    else if (groupNameDisplay) this.handleGroupNameEditStart(groupNameDisplay);
+                
+                this.elements.seatingChart.addEventListener('click', (e) => this.handleChartClicks(e));
+                this.elements.waitingBench.addEventListener('click', (e) => this.handleChartClicks(e));
+                
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); this.undo(); }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); this.redo(); }
                 });
             }
 
-            initialize() {
-                this.elements.studentsTextarea.value = '';
-                this.updateConditionalInputs();
-                this.updateUIState();
-                this.updatePrintOptionCheckboxes();
-                this.setupPrintListener();
-                this.arrangeSeats();
-            }
-
-            handleModeChange(newMode) {
-                if (this.state.seatingMode !== newMode) {
-                    this.state.seatingMode = newMode;
-                    this.updateConditionalInputs();
-                    this.arrangeSeats();
+            updateDisplayOptions() {
+                const layout = this.elements.classroomLayout;
+                
+                // Toggle Classes based on state
+                layout.classList.toggle('view-style-gender-color', this.state.showGenderColor);
+                layout.classList.toggle('view-style-needs', this.state.showNeeds);
+                layout.classList.toggle('view-style-gender-symbol', this.state.showGenderSymbol);
+                layout.classList.toggle('view-style-hide-empty', !this.state.showEmptySeats);
+                layout.classList.toggle('view-style-hide-group-names', !this.state.showGroupNames);
+                layout.classList.toggle('view-style-anonymous', this.state.showAnonymous);
+                
+                // Special handling for empty groups hiding
+                if (!this.state.showEmptySeats && this.state.seatingMode === 'group') {
+                     document.querySelectorAll('.group-container').forEach(c => { 
+                         const hasStudent = c.querySelector('.desk:not(.empty-seat)');
+                         if(!hasStudent) c.classList.add('all-empty'); else c.classList.remove('all-empty');
+                     });
+                } else {
+                    document.querySelectorAll('.group-container.all-empty').forEach(c => c.classList.remove('all-empty'));
                 }
             }
 
-            updateConfigFromInputsAndRender() {
-                this.state.rows = Math.max(1, parseInt(this.elements.rowsInput.value) || 1);
-                this.state.cols = Math.max(1, parseInt(this.elements.colsInput.value) || 1);
-                this.state.numGroups = Math.max(0, parseInt(this.elements.numGroupsInput.value) || 0);
-                this.state.studentsPerGroup = Math.max(1, parseInt(this.elements.studentsPerGroupInput.value) || 1);
+            initializeDefault() {
+                this.updateConditionalInputs();
+                this.updateUIState();
+                this.updateCheckboxInputs();
+                this.updateDisplayOptions();
+                this.arrangeSeats();
+            }
+
+            updateCheckboxInputs() {
+                 this.elements.showGenderColorCheckbox.checked = this.state.showGenderColor;
+                 this.elements.showNeedsCheckbox.checked = this.state.showNeeds;
+                 this.elements.showGenderSymbolCheckbox.checked = this.state.showGenderSymbol;
+                 this.elements.showEmptySeatsCheckbox.checked = this.state.showEmptySeats;
+                 this.elements.showGroupNamesCheckbox.checked = this.state.showGroupNames;
+                 this.elements.showAnonymousCheckbox.checked = this.state.showAnonymous;
+                 this.elements.includeBenchInShuffle.checked = this.state.includeBenchInShuffle;
+            }
+
+            // ... (Drag & Drop Logic, History, Undo/Redo - Kept same as previous) ...
+            saveStateToHistory() {
+                const stateSnapshot = {
+                    ...this.state,
+                    layoutMap: Array.from(this.state.layoutMap.entries()),
+                    lockedDeskIds: Array.from(this.state.lockedDeskIds),
+                    waitingBench: JSON.parse(JSON.stringify(this.state.waitingBench)),
+                    groupNames: JSON.parse(JSON.stringify(this.state.groupNames))
+                };
+                if (this.historyIndex < this.historyStack.length - 1) {
+                    this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
+                }
+                this.historyStack.push(JSON.stringify(stateSnapshot));
+                if (this.historyStack.length > this.MAX_HISTORY) this.historyStack.shift();
+                else this.historyIndex++;
+                this.updateUndoRedoButtons();
+            }
+
+            undo() { if (this.historyIndex > 0) { this.historyIndex--; this.restoreStateFromHistory(this.historyStack[this.historyIndex]); } }
+            redo() { if (this.historyIndex < this.historyStack.length - 1) { this.historyIndex++; this.restoreStateFromHistory(this.historyStack[this.historyIndex]); } }
+
+            restoreStateFromHistory(jsonString) {
+                const s = JSON.parse(jsonString);
+                this.state = { ...s, lockedDeskIds: new Set(s.lockedDeskIds), layoutMap: new Map(s.layoutMap) };
+                this.elements.classNameInput.value = this.state.className;
                 this.elements.rowsInput.value = this.state.rows;
                 this.elements.colsInput.value = this.state.cols;
                 this.elements.numGroupsInput.value = this.state.numGroups;
                 this.elements.studentsPerGroupInput.value = this.state.studentsPerGroup;
-                this.arrangeSeats();
-            }
+                
+                const modeRadio = document.querySelector(`input[name="seatingMode"][value="${this.state.seatingMode}"]`);
+                if(modeRadio) modeRadio.checked = true;
+                const dragRadio = document.querySelector(`input[name="dragMode"][value="${this.state.dragMode}"]`);
+                if(dragRadio) dragRadio.checked = true;
 
-            updateClassName() {
-                this.state.className = this.elements.classNameInput.value.trim();
-                this.elements.webClassName.textContent = this.state.className;
-                this.elements.printClassName.textContent = this.state.className || '座位表';
-            }
-
-            updateConditionalInputs() {
-                const isTraditional = this.state.seatingMode === 'traditional';
-                this.elements.traditionalInputsDiv.classList.toggle('hidden', !isTraditional);
-                this.elements.groupInputsDiv.classList.toggle('hidden', isTraditional);
-                this.elements.groupDragInfo.classList.toggle('hidden', isTraditional);
-                this.elements.addGroupBtn.classList.toggle('hidden', isTraditional);
-                const currentModeRadio = document.querySelector(`input[name="seatingMode"][value="${this.state.seatingMode}"]`);
-                if (currentModeRadio) currentModeRadio.checked = true;
-            }
-
-            parseStudents(text) {
-                const generateUniqueId = () => `s_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-                const students = [];
-                const seenNumbers = new Set(); 
-                text.split('\n').map(l => l.trim()).filter(l => l).forEach((line) => {
-                    const parts = line.split(/\s+/);
-                    if (parts.length < 3) return;
-                    const number = parts[0].trim();
-                    const name = parts[1].trim();
-                    const genderInput = parts[2].toLowerCase();
-                    const needs = parts.length >= 4 ? parts.slice(3).join(' ').trim() : null;
-                    let gender = '未知';
-                    if (['男', 'm', 'male'].includes(genderInput)) gender = '男';
-                    else if (['女', 'f', 'female'].includes(genderInput)) gender = '女';
-                    if (number && seenNumbers.has(number)) {
-                       console.warn(`Duplicate student number "${number}" detected in list. Using first occurrence.`);
-                       return;
-                    }
-                    if(number) seenNumbers.add(number);
-                    students.push({ id: generateUniqueId(), number: number || null, name: name, gender: gender, needs: needs });
-                });
-                return students;
-            }
-
-            arrangeSeats(randomize = false) {
-                this.state.students = this.parseStudents(this.elements.studentsTextarea.value);
-                this.state.groupNames = {};
-                this.nextGroupId = 0;
-                this.state.layoutMap.clear();
-                let initialCapacity = this.state.seatingMode === 'traditional' ? this.state.rows * this.state.cols : this.state.numGroups * this.state.studentsPerGroup;
-                let studentsToPlace = [...this.state.students];
-                if (studentsToPlace.length > initialCapacity && initialCapacity > 0) console.warn(`Student count (${studentsToPlace.length}) > initial capacity (${initialCapacity}).`);
-                else if (initialCapacity <= 0 && studentsToPlace.length > 0) { console.warn(`Initial capacity <= 0 (${initialCapacity}). Cannot place students.`); studentsToPlace = []; }
-                if (randomize) studentsToPlace = this.shuffleArray(studentsToPlace);
-                let studentIndex = 0;
-                if (this.state.seatingMode === 'traditional') {
-                     for (let i = 0; i < this.state.rows; i++) {
-                        for (let j = 0; j < this.state.cols; j++) {
-                            const deskId = `r${i}c${j}`;
-                            if (studentIndex < studentsToPlace.length) { this.state.layoutMap.set(deskId, studentsToPlace[studentIndex++]); }
-                        }
-                     }
-                } else {
-                     for (let g = 0; g < this.state.numGroups; g++) {
-                         const currentGroupIndex = this.nextGroupId++;
-                         const groupKey = `g${currentGroupIndex}`;
-                         this.state.groupNames[groupKey] = `第 ${currentGroupIndex + 1} 組`;
-                         for (let s = 0; s < this.state.studentsPerGroup; s++) {
-                            const deskId = `${groupKey}d${s}`;
-                            if (studentIndex < studentsToPlace.length) { this.state.layoutMap.set(deskId, studentsToPlace[studentIndex++]); }
-                        }
-                     }
-                     this.nextGroupId = this.state.numGroups;
-                }
+                this.updateConditionalInputs();
+                this.updateUIState();
+                this.updateCheckboxInputs();
                 this.renderSeatingChart();
+                this.renderWaitingBench();
+                this.updateDisplayOptions();
+                this.saveToLocalStorage();
+                this.updateUndoRedoButtons();
             }
 
-            refreshStudentDataAndUpdateDesks() {
-                const newStudentsData = this.parseStudents(this.elements.studentsTextarea.value);
-                const newStudentMapByNumber = new Map(newStudentsData.map(s => [s.number, s]));
-                const currentDeskElements = Array.from(this.elements.seatingChart.querySelectorAll('.desk'));
-                const availableEmptyDeskIds = [];
-                const assignedDeskIds = new Set();
-                currentDeskElements.forEach(deskElement => {
-                    const deskId = deskElement.dataset.deskId;
-                    const currentStudentNumber = deskElement.dataset.studentNumber;
-                    if (currentStudentNumber) {
-                        const updatedStudentData = newStudentMapByNumber.get(currentStudentNumber);
-                        if (updatedStudentData) {
-                            this._updateDeskContent(deskElement, updatedStudentData);
-                            this.state.layoutMap.set(deskId, updatedStudentData);
-                            newStudentMapByNumber.delete(currentStudentNumber);
-                            assignedDeskIds.add(deskId);
-                        } else {
-                            this._updateDeskContent(deskElement, null);
-                            this.state.layoutMap.delete(deskId);
-                            availableEmptyDeskIds.push(deskId);
-                            assignedDeskIds.add(deskId);
-                        }
+            updateUndoRedoButtons() {
+                this.elements.undoBtn.disabled = this.historyIndex <= 0;
+                this.elements.redoBtn.disabled = this.historyIndex >= this.historyStack.length - 1;
+            }
+
+            // ... (Seat Arrangement Logic - Kept same) ...
+            arrangeSeats(randomize = false) {
+                const textStudents = this.parseStudents(this.elements.studentsTextarea.value);
+                this.state.students = textStudents;
+                const lockedAssignments = new Map();
+                this.state.lockedDeskIds.forEach(deskId => {
+                    const student = this.state.layoutMap.get(deskId);
+                    if (student) {
+                        const validStudent = textStudents.find(s => s.id === student.id || (s.number === student.number && s.name === student.name));
+                        if (validStudent) lockedAssignments.set(deskId, validStudent);
+                    }
+                });
+                let availableStudents = textStudents.filter(s => {
+                    const isLocked = Array.from(lockedAssignments.values()).some(lockedS => lockedS.id === s.id);
+                    return !isLocked;
+                });
+                if (!this.state.includeBenchInShuffle && randomize) {
+                     availableStudents = availableStudents.filter(s => {
+                         const isInBench = this.state.waitingBench.some(wbS => wbS.id === s.id || (wbS.number === s.number && wbS.name === s.name));
+                         return !isInBench;
+                     });
+                } else {
+                    this.state.waitingBench = []; 
+                }
+                if (randomize) availableStudents = this.shuffleArray(availableStudents);
+                const allDeskIds = this.generateAllDeskIds();
+                const newLayoutMap = new Map(lockedAssignments);
+                let studentIndex = 0;
+                allDeskIds.forEach(deskId => {
+                    if (newLayoutMap.has(deskId)) return;
+                    if (studentIndex < availableStudents.length) {
+                        newLayoutMap.set(deskId, availableStudents[studentIndex++]);
+                    }
+                });
+                while (studentIndex < availableStudents.length) {
+                    this.state.waitingBench.push(availableStudents[studentIndex++]);
+                }
+                this.state.layoutMap = newLayoutMap;
+                this.renderSeatingChart();
+                this.renderWaitingBench();
+                this.updateDisplayOptions(); // Ensure visual styles applied
+                this.saveToLocalStorage();
+            }
+
+            // ... (Refresh, clear, drag logic - Kept same) ...
+            refreshStudentData() {
+                 const textStudents = this.parseStudents(this.elements.studentsTextarea.value);
+                const newStudentMap = new Map(textStudents.map(s => [s.number + '_' + s.name, s]));
+                this.state.layoutMap.forEach((student, deskId) => {
+                    const key = student.number + '_' + student.name;
+                    if (newStudentMap.has(key)) {
+                        this.state.layoutMap.set(deskId, { ...student, ...newStudentMap.get(key), id: student.id });
+                        newStudentMap.delete(key);
                     } else {
-                         if (deskId && !this.state.layoutMap.has(deskId)) { availableEmptyDeskIds.push(deskId); }
-                         else if (deskId && this.state.layoutMap.has(deskId)) { this.state.layoutMap.delete(deskId); availableEmptyDeskIds.push(deskId); }
+                        this.state.layoutMap.delete(deskId);
+                        this.state.lockedDeskIds.delete(deskId);
                     }
                 });
-                const studentsToAdd = Array.from(newStudentMapByNumber.values());
-                studentsToAdd.forEach(newStudent => {
-                    if (availableEmptyDeskIds.length > 0) {
-                        const targetDeskId = availableEmptyDeskIds.shift();
-                        const targetDeskElement = this.elements.seatingChart.querySelector(`.desk[data-desk-id="${targetDeskId}"]`);
-                        if (targetDeskElement) {
-                            this._updateDeskContent(targetDeskElement, newStudent);
-                            this.state.layoutMap.set(targetDeskId, newStudent);
-                            assignedDeskIds.add(targetDeskId);
-                        }
+                this.state.waitingBench = this.state.waitingBench.filter(s => {
+                    const key = s.number + '_' + s.name;
+                    if (newStudentMap.has(key)) {
+                        Object.assign(s, newStudentMap.get(key));
+                        newStudentMap.delete(key);
+                        return true;
                     }
+                    return false;
                 });
-                this.state.students = newStudentsData;
-                this.updateClassInfo(currentDeskElements.length, this.state.layoutMap.size);
-                this.updateGenderVisibility();
+                const remainingStudents = Array.from(newStudentMap.values());
+                const emptyDesks = this.getEmptyDeskIds();
+                while (remainingStudents.length > 0 && emptyDesks.length > 0) {
+                    this.state.layoutMap.set(emptyDesks.shift(), remainingStudents.shift());
+                }
+                remainingStudents.forEach(s => this.state.waitingBench.push(s));
+                this.renderSeatingChart();
+                this.renderWaitingBench();
+                this.updateDisplayOptions();
+                this.saveToLocalStorage();
+            }
+            
+            clearSeatingLayout() {
+                // Move everyone to bench
+                this.state.layoutMap.forEach(s => this.state.waitingBench.push(s));
+                this.state.layoutMap.clear();
+                this.state.lockedDeskIds.clear();
+                
+                this.renderSeatingChart();
+                this.renderWaitingBench();
+                this.updateClassInfo(document.querySelectorAll('#seatingChart .desk').length);
+                this.saveToLocalStorage();
             }
 
+            getEmptyDeskIds() { const ids = []; document.querySelectorAll('#seatingChart .desk').forEach(desk => { const id = desk.dataset.deskId; if (id && !this.state.layoutMap.has(id)) ids.push(id); }); return ids; }
+            generateAllDeskIds() { const ids = []; if (this.state.seatingMode === 'traditional') { for (let i = 0; i < this.state.rows; i++) { for (let j = 0; j < this.state.cols; j++) ids.push(`r${i}c${j}`); } } else { const groupsToGen = Math.max(this.state.numGroups, Object.keys(this.state.groupNames).length); for (let g = 0; g < groupsToGen; g++) { const gKey = `g${g}`; if (!this.state.groupNames[gKey]) this.state.groupNames[gKey] = `第 ${g+1} 組`; for (let s = 0; s < this.state.studentsPerGroup; s++) ids.push(`${gKey}d${s}`); } } return ids; }
+
+            // --- Rendering ---
             renderSeatingChart() {
                 this.destroySortable();
                 const seatingChart = this.elements.seatingChart;
                 seatingChart.innerHTML = '';
-                seatingChart.className = `min-h-[250px] rounded bg-white shadow-sm pb-4 mode-${this.state.seatingMode}`;
-                let totalSlots = 0;
-                if (this.state.seatingMode === 'traditional') {
-                    totalSlots = this.renderTraditionalLayoutStructure();
-                } else {
-                    totalSlots = this.renderGroupLayoutStructure();
-                }
-                this.populateDesksFromMap();
-                this.updateClassInfo(totalSlots, this.state.layoutMap.size);
+                seatingChart.className = `transition-all min-h-[300px] rounded bg-white shadow-sm pb-8 mode-${this.state.seatingMode}`;
+                let totalSlots = (this.state.seatingMode === 'traditional') ? this.renderTraditionalLayout() : this.renderGroupLayout();
+                this.state.layoutMap.forEach((student, deskId) => {
+                    const desk = seatingChart.querySelector(`.desk[data-desk-id="${deskId}"]`);
+                    if (desk) this._updateDeskContent(desk, student);
+                });
                 this.renderClassroomObjects();
-                this.updateClassName();
-                if (this.state.seatingMode === 'traditional') {
-                    this.initSortableForTraditional();
-                } else {
-                    this.initSortableForGroups();
-                    this.initSortableForGroupContainers();
-                }
-                this.updateGenderVisibility();
+                this.updateClassInfo(totalSlots);
+                if (this.state.seatingMode === 'group') this.initGroupSorting();
+                if (this.state.dragMode === 'insert') this.initSortable(); else this.initNativeDrag();
+                
+                // Re-apply visual options after re-render
+                this.updateDisplayOptions();
             }
 
-            renderTraditionalLayoutStructure() {
+            renderTraditionalLayout() {
                 const chart = this.elements.seatingChart;
-                chart.style.display = 'grid';
                 chart.style.gridTemplateColumns = `repeat(${this.state.cols}, minmax(var(--desk-width), auto))`;
-                chart.style.gap = '6px'; chart.style.padding = '5px';
                 const rowIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: this.state.rows }, (_, i) => i) : Array.from({ length: this.state.rows }, (_, i) => this.state.rows - 1 - i);
                 const colIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: this.state.cols }, (_, j) => j) : Array.from({ length: this.state.cols }, (_, j) => this.state.cols - 1 - j);
-                let deskCount = 0;
-                for (const i of rowIndices) {
-                    for (const j of colIndices) {
-                        const seatId = `r${i}c${j}`;
-                        chart.appendChild(this.createDeskElement(seatId, null));
-                        deskCount++;
-                    }
-                }
-                return deskCount;
+                let count = 0;
+                rowIndices.forEach(i => colIndices.forEach(j => { chart.appendChild(this.createDeskElement(`r${i}c${j}`, null)); count++; }));
+                return count;
             }
 
-            renderGroupLayoutStructure() {
+            renderGroupLayout() {
                 const chart = this.elements.seatingChart;
-                chart.style.display = 'flex'; chart.style.flexWrap = 'wrap'; chart.style.justifyContent = 'center'; chart.style.alignItems = 'flex-start'; chart.style.gap = '12px'; chart.style.padding = '10px'; chart.style.gridTemplateColumns = '';
-                let groupIndicesToRender = this.getGroupIndicesToRender();
-                const groupContainerElements = [];
-                let totalRenderedDesks = 0;
-                groupIndicesToRender.forEach(gIndex => {
-                    const groupKey = `g${gIndex}`;
-                    const groupContainer = this.createGroupContainerElement(groupKey);
-                    const existingDeskIds = Array.from(this.state.layoutMap.keys()).filter(id => id.startsWith(`${groupKey}d`));
-                    let maxExistingDeskIndex = -1;
-                    existingDeskIds.forEach(deskId => { const match = deskId.match(/d(\d+)$/); if (match && match[1]) maxExistingDeskIndex = Math.max(maxExistingDeskIndex, parseInt(match[1])); });
-                    const targetSlots = Math.max(1, this.state.studentsPerGroup, maxExistingDeskIndex + 1);
-                    const deskElements = [];
-                    for (let s_logical = 0; s_logical < targetSlots; s_logical++) {
-                       const deskId = `${groupKey}d${s_logical}`;
-                       deskElements.push(this.createDeskElement(deskId, null));
-                       totalRenderedDesks++;
-                    }
-                    if (this.state.viewPerspective === 'student') { deskElements.reverse(); }
-                    deskElements.forEach(deskEl => groupContainer.appendChild(deskEl));
-                    groupContainerElements.push(groupContainer);
+                chart.style.gridTemplateColumns = '';
+                let maxG = this.state.numGroups - 1;
+                this.state.layoutMap.forEach((_, k) => { if(k.startsWith('g')) { const gNum = parseInt(k.match(/g(\d+)/)[1]); if(gNum > maxG) maxG = gNum; } });
+                const groupContainers = [];
+                let totalDesks = 0;
+                for (let i = 0; i <= maxG; i++) {
+                    const gKey = `g${i}`;
+                    const container = this.createGroupContainer(gKey, i);
+                    let maxD = this.state.studentsPerGroup - 1;
+                    this.state.layoutMap.forEach((_, k) => { if(k.startsWith(gKey + 'd')) { const dNum = parseInt(k.match(/d(\d+)/)[1]); if(dNum > maxD) maxD = dNum; } });
+                    const desks = [];
+                    for(let d=0; d<=maxD; d++) { desks.push(this.createDeskElement(`${gKey}d${d}`, null)); totalDesks++; }
+                    if (this.state.viewPerspective === 'student') desks.reverse();
+                    desks.forEach(d => container.appendChild(d));
+                    groupContainers.push(container);
+                }
+                if(this.state.viewPerspective === 'student') groupContainers.reverse();
+                groupContainers.forEach(g => chart.appendChild(g));
+                return totalDesks;
+            }
+
+            renderWaitingBench() {
+                const bench = this.elements.waitingBench;
+                bench.innerHTML = '';
+                this.state.waitingBench.forEach(student => {
+                    const card = this.createDeskElement(null, student);
+                    card.classList.add('w-auto', 'h-auto', 'min-h-[60px]', 'min-w-[80px]');
+                    bench.appendChild(card);
                 });
-                const finalGroupOrder = this.state.viewPerspective === 'student' ? groupContainerElements.reverse() : groupContainerElements;
-                finalGroupOrder.forEach(groupEl => chart.appendChild(groupEl));
-                return totalRenderedDesks;
-            }
-
-            populateDesksFromMap() {
-                this.state.layoutMap.forEach((student, deskId) => {
-                    const deskElement = this.elements.seatingChart.querySelector(`.desk[data-desk-id="${deskId}"]`);
-                    if (deskElement) { this._updateDeskContent(deskElement, student); }
-                });
-            }
-
-            getGroupIndicesToRender() {
-                 const groupIndicesInMap = new Set();
-                 this.state.layoutMap.forEach((_, key) => { if (key.startsWith('g')) { const match = key.match(/^g(\d+)/); if (match && match[1]) groupIndicesInMap.add(parseInt(match[1])); } });
-                 Object.keys(this.state.groupNames).forEach(groupKey => { const match = groupKey.match(/^g(\d+)$/); if (match && match[1]) groupIndicesInMap.add(parseInt(match[1])); });
-                 const maxConfigGroupIndex = this.state.seatingMode === 'group' ? Math.max(0, this.state.numGroups - 1, this.nextGroupId - 1) : -1;
-                 if (maxConfigGroupIndex >= 0) { for(let i = 0; i <= maxConfigGroupIndex; i++) { if(this.state.groupNames[`g${i}`] !== undefined || i < this.state.numGroups) { groupIndicesInMap.add(i); } } }
-                 const highestIndex = groupIndicesInMap.size > 0 ? Math.max(...Array.from(groupIndicesInMap)) : -1;
-                 this.nextGroupId = Math.max(this.nextGroupId, highestIndex + 1);
-                 return Array.from(groupIndicesInMap).sort((a, b) => a - b);
-            }
-
-            createGroupContainerElement(groupKey) {
-                 const groupIndex = parseInt(groupKey.substring(1));
-                 const groupContainer = document.createElement('div');
-                 groupContainer.className = 'group-container';
-                 groupContainer.dataset.groupKey = groupKey;
-                 groupContainer.style.borderColor = this.getGroupColor(groupIndex);
-                 const nameContainer = document.createElement('div'); nameContainer.className = 'group-name-container';
-                 const nameDisplay = document.createElement('span'); nameDisplay.className = 'group-name-display';
-                 if (this.state.groupNames[groupKey] === undefined) { this.state.groupNames[groupKey] = `第 ${groupIndex + 1} 組`; }
-                 const currentName = this.state.groupNames[groupKey]; nameDisplay.textContent = currentName; nameDisplay.title = `點擊編輯${currentName ? ` "${currentName}"` : '小組名稱'}`;
-                 const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'group-name-input'; nameInput.value = currentName; nameInput.maxLength = 30; nameInput.spellcheck = false;
-                 nameInput.addEventListener('blur', (e) => this.handleGroupNameEditEnd(e.target));
-                 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); else if (e.key === 'Escape') { const groupKeyFromInput = e.target.closest('.group-container')?.dataset.groupKey; if(groupKeyFromInput) { const originalName = this.state.groupNames[groupKeyFromInput] ?? `第 ${parseInt(groupKeyFromInput.substring(1)) + 1} 組`; e.target.value = originalName; } e.target.blur(); } });
-                 nameContainer.appendChild(nameDisplay); nameContainer.appendChild(nameInput);
-                 groupContainer.appendChild(nameContainer);
-                 groupContainer.appendChild(this.createDeleteGroupButton());
-                 return groupContainer;
-            }
-
-            handleGroupNameEditStart(nameDisplayElement) { const nameInput = nameDisplayElement.nextElementSibling; if (!nameInput) return; nameDisplayElement.classList.add('editing'); nameInput.classList.add('editing'); nameInput.select(); nameInput.focus(); }
-            handleGroupNameEditEnd(nameInputElement) { const nameDisplay = nameInputElement.previousElementSibling; const groupContainer = nameInputElement.closest('.group-container'); if (!nameDisplay || !groupContainer) return; const groupKey = groupContainer.dataset.groupKey; const newName = nameInputElement.value.trim(); this.state.groupNames[groupKey] = newName; nameDisplay.textContent = newName; nameDisplay.title = `點擊編輯${newName ? ` "${newName}"` : '小組名稱'}`; nameInputElement.classList.remove('editing'); nameDisplay.classList.remove('editing'); }
-            getGroupColor(index) { const colors = ['#fca5a5','#fdba74','#fde047','#86efac','#93c5fd','#d8b4fe','#f9a8d4','#a7f3d0','#fbcfe8','#bfdbfe', '#a5f3fc', '#bbf7d0', '#fef08a', '#fed7aa', '#fecaca']; return colors[index % colors.length]; }
-            createDeleteGroupButton() { const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-group-btn no-print'; deleteBtn.innerHTML = '<i class="fas fa-trash-alt fa-xs pointer-events-none"></i>'; deleteBtn.title = '刪除此小組 (直接刪除)'; return deleteBtn; }
-            createDeleteSeatButton() { const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-seat-btn no-print'; deleteBtn.innerHTML = '×'; deleteBtn.title = '刪除此空位 (直接刪除)'; return deleteBtn; }
-
-            _updateDeskContent(deskElement, student) {
-                 deskElement.innerHTML = ''; deskElement.classList.remove('empty-seat', 'male', 'female'); delete deskElement.dataset.studentId; delete deskElement.dataset.studentNumber; deskElement.draggable = true; deskElement.style.cursor = 'grab';
-                 if (student && student.name) {
-                     deskElement.dataset.studentId = student.id; if(student.number) deskElement.dataset.studentNumber = student.number;
-                     const genderClass = student.gender === '男' ? 'male' : student.gender === '女' ? 'female' : '';
-                     const genderSymbol = student.gender === '男' ? '♂' : student.gender === '女' ? '♀' : '';
-                     if (genderClass) deskElement.classList.add(genderClass);
-                     const infoDiv = document.createElement('div'); infoDiv.className = 'student-info w-full text-center text-[11px] leading-tight';
-                     const nameLine = document.createElement('div'); nameLine.className = 'student-name-line font-semibold text-gray-800 truncate';
-                     const studentDisplayText = `${student.number || '?'} ${student.name}`;
-                     nameLine.title = `${studentDisplayText}${student.needs ? ` (${student.needs})` : ''}`;
-                     nameLine.innerHTML = `${studentDisplayText} <span class="gender-symbol">${genderSymbol}</span>`;
-                     infoDiv.appendChild(nameLine);
-                     const needsPrintDiv = document.createElement('div'); needsPrintDiv.className = 'desk-needs-print'; needsPrintDiv.textContent = student.needs || ''; infoDiv.appendChild(needsPrintDiv);
-                     deskElement.appendChild(infoDiv);
-                     if (student.needs) { const needsIconSpan = document.createElement('span'); needsIconSpan.className = 'needs-icon'; needsIconSpan.innerHTML = `<i class="fas ${this.getNeedsIcon(student.needs)}"></i><span class="tooltip">${student.needs}</span>`; deskElement.appendChild(needsIconSpan); }
-                 } else {
-                     deskElement.classList.add('empty-seat'); deskElement.style.cursor = 'grab';
-                     const emptyText = document.createElement('div'); emptyText.className = 'text-gray-400 text-[10px]'; emptyText.textContent = '空位'; deskElement.appendChild(emptyText);
-                     if (this.state.seatingMode === 'group') { deskElement.appendChild(this.createDeleteSeatButton()); }
-                     delete deskElement.dataset.studentId; delete deskElement.dataset.studentNumber;
-                 }
-                 this.updateGenderVisibility();
+                if (this.state.dragMode === 'insert') {
+                     this.sortableInstances.push(new Sortable(bench, { group: 'shared-desks', animation: 150, onEnd: (evt) => { this.saveStateToHistory(); this.handleSortableDrop(evt); } }));
+                } else {
+                    Array.from(bench.children).forEach(el => { this.attachNativeEvents(el); });
+                    bench.addEventListener('dragover', this.handleNativeDragOver);
+                    bench.addEventListener('dragleave', this.handleNativeDragLeave);
+                    bench.addEventListener('drop', this.handleNativeDrop);
+                }
             }
 
             createDeskElement(deskId, student) {
-                const deskElement = document.createElement('div'); deskElement.className = 'desk'; deskElement.dataset.deskId = deskId;
-                this._updateDeskContent(deskElement, student);
-                return deskElement;
-             }
-
-            renderClassroomObjects() {
-                const showBb = this.state.showBlackboard; const showTd = this.state.showTeacherDesk;
-                this.elements.blackboardObject.classList.toggle('hidden', !showBb); this.elements.teacherDeskObject.classList.toggle('hidden', !showTd);
-                this.elements.teacherDeskContainerTop.innerHTML = ''; this.elements.teacherDeskContainerBottom.innerHTML = ''; this.elements.classroomObjectsContainerTop.innerHTML = ''; this.elements.classroomObjectsContainerBottom.innerHTML = '';
-                const [bbContainer, tdContainer] = (this.state.viewPerspective === 'teacher') ? [this.elements.classroomObjectsContainerTop, this.elements.teacherDeskContainerTop] : [this.elements.classroomObjectsContainerBottom, this.elements.teacherDeskContainerBottom];
-                if (showBb) bbContainer.appendChild(this.elements.blackboardObject);
-                if (showTd) tdContainer.appendChild(this.elements.teacherDeskObject);
+                const desk = document.createElement('div');
+                desk.className = 'desk';
+                if(deskId) desk.dataset.deskId = deskId;
+                this._updateDeskContent(desk, student);
+                return desk;
             }
 
-            updateUIState() {
-                 this.elements.perspectiveToggleBtn.innerHTML = `<i class="fas fa-sync-alt mr-1"></i> ${this.state.viewPerspective === 'teacher' ? '切換學生視角' : '切換教師視角'}`;
-                 ['Blackboard', 'TeacherDesk'].forEach(type => { const showState = this.state[`show${type}`]; const btn = this.elements[`toggle${type}Btn`]; const icon = type === 'Blackboard' ? 'fa-chalkboard' : 'fa-person-chalkboard'; const text = type === 'Blackboard' ? '黑板' : '講桌'; const color = type === 'Blackboard' ? 'stone' : 'purple'; btn.innerHTML = `<i class="fas ${icon} mr-1"></i> ${showState ? '隱藏' : '顯示'}${text}`; btn.classList.remove(`bg-${color}-700`, `hover:bg-${color}-800`, `bg-${color}-500`, `hover:bg-${color}-600`); btn.classList.add(`bg-${color}-${showState ? '700' : '500'}`, `hover:bg-${color}-${showState ? '800' : '600'}`); });
-                 this.elements.showGenderCheckbox.checked = this.state.showGender; this.updateGenderVisibility();
-             }
-            updatePrintOptionCheckboxes() { this.elements.printNeedsCheckbox.checked = this.state.printNeeds; this.elements.printGenderCheckbox.checked = this.state.printGender; this.elements.printEmptySeatsCheckbox.checked = this.state.printEmptySeats; this.elements.printGroupNamesCheckbox.checked = this.state.printGroupNames; }
-
-            togglePerspective() {
-                this.state.viewPerspective = this.state.viewPerspective === 'teacher' ? 'student' : 'teacher';
-                this.updateUIState();
-                this.renderSeatingChart();
+            createGroupContainer(groupKey, index) {
+                const div = document.createElement('div');
+                div.className = 'group-container';
+                div.dataset.groupKey = groupKey;
+                const colors = ['#fca5a5','#fdba74','#fde047','#86efac','#93c5fd','#d8b4fe','#f9a8d4','#a7f3d0'];
+                div.style.borderColor = colors[index % colors.length];
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'group-name-container';
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'group-name-display';
+                const currentName = this.state.groupNames[groupKey] || `第 ${index + 1} 組`;
+                this.state.groupNames[groupKey] = currentName;
+                nameSpan.textContent = currentName;
+                const nameInput = document.createElement('input');
+                nameInput.className = 'group-name-input';
+                nameInput.value = currentName;
+                nameInput.addEventListener('blur', (e) => { this.saveStateToHistory(); this.handleGroupNameEditEnd(e.target); });
+                nameInput.addEventListener('keydown', (e) => { if(e.key==='Enter') e.target.blur(); });
+                nameDiv.append(nameSpan, nameInput);
+                const delBtn = document.createElement('div');
+                delBtn.className = 'delete-group-btn';
+                delBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                div.append(nameDiv, delBtn);
+                return div;
             }
 
-            toggleClassroomBlackboard() { this.state.showBlackboard = !this.state.showBlackboard; this.updateUIState(); this.renderClassroomObjects(); }
-            toggleClassroomTeacherDesk() { this.state.showTeacherDesk = !this.state.showTeacherDesk; this.updateUIState(); this.renderClassroomObjects(); }
-            toggleGenderDisplay() { this.state.showGender = this.elements.showGenderCheckbox.checked; this.updateGenderVisibility(); }
-            togglePrintNeeds() { this.state.printNeeds = this.elements.printNeedsCheckbox.checked; }
-            togglePrintGender() { this.state.printGender = this.elements.printGenderCheckbox.checked; }
-            togglePrintEmptySeats() { this.state.printEmptySeats = this.elements.printEmptySeatsCheckbox.checked; }
-            togglePrintGroupNames() { this.state.printGroupNames = this.elements.printGroupNamesCheckbox.checked; }
-
-            updateGenderVisibility() { this.elements.classroomLayout.classList.toggle('gender-visible', this.state.showGender); }
-
-            destroySortable() {
-                this.sortableInstances.forEach((instance) => { if (instance && typeof instance.destroy === 'function') { try { instance.destroy(); } catch (e) { console.error(`Error destroying sortable:`, instance.el, e); } } });
-                this.sortableInstances = [];
-                const containers = [this.elements.seatingChart, ...this.elements.seatingChart.querySelectorAll('.group-container')];
-                containers.forEach(el => { if (el && Sortable.get(el)) { try { Sortable.get(el).destroy(); } catch(e) { console.error("Error destroying lingering sortable:", el, e); } } });
+            anonymizeName(name) {
+                if (!name || name.length < 2) return name;
+                if (name.length === 2) return name[0] + 'O';
+                const mid = Math.floor(name.length / 2);
+                return name.substring(0, mid) + 'O' + name.substring(mid + 1);
             }
 
-            initSortableForTraditional() {
-                 if (this.state.seatingMode !== 'traditional') return;
-                 if(Sortable.get(this.elements.seatingChart)) { Sortable.get(this.elements.seatingChart).destroy();}
-                 const instance = new Sortable(this.elements.seatingChart, { group: 'shared-desks', animation: 150, ghostClass: 'sortable-ghost', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => this.handleDragEnd(evt) });
-                 this.sortableInstances.push(instance);
-             }
+            _updateDeskContent(desk, student) {
+                desk.innerHTML = '';
+                desk.classList.remove('empty-seat', 'male', 'female', 'is-locked');
+                delete desk.dataset.studentId;
+                const lockBtn = document.createElement('div');
+                lockBtn.className = 'lock-btn';
+                lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
+                
+                if (student) {
+                    desk.dataset.studentId = student.id;
+                    if (student.gender === '男') desk.classList.add('male');
+                    if (student.gender === '女') desk.classList.add('female');
+                    const info = document.createElement('div');
+                    info.className = 'student-info';
+                    
+                    const anonName = this.anonymizeName(student.name);
 
-            initSortableForGroups() {
-                 if (this.state.seatingMode !== 'group') return;
-                 this.elements.seatingChart.querySelectorAll('.group-container').forEach(container => {
-                     if(Sortable.get(container)) { Sortable.get(container).destroy();}
-                     const instance = new Sortable(container, { group: 'shared-desks', animation: 150, ghostClass: 'sortable-ghost', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => this.handleDragEnd(evt) });
-                     this.sortableInstances.push(instance);
-                 });
-             }
-
-            initSortableForGroupContainers() {
-                 if (this.state.seatingMode !== 'group') return;
-                 const existingGroupSortable = this.sortableInstances.find(inst => inst.el === this.elements.seatingChart && inst.options.group !== 'shared-desks');
-                 if (existingGroupSortable) { return; }
-                 const existingDeskSortable = Sortable.get(this.elements.seatingChart);
-                 if (existingDeskSortable && existingDeskSortable.options.group === 'shared-desks') { existingDeskSortable.destroy(); }
-                 const instance = new Sortable(this.elements.seatingChart, { animation: 150, filter: '.desk', preventOnFilter: true, ghostClass: 'sortable-ghost-group', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => { this.updateLayoutMapBasedOnDOM(); } });
-                 this.sortableInstances.push(instance);
-             }
-
-            handleDragEnd(evt) {
-                 const { item: draggedItem, to: targetList, from: sourceList, newIndex: newVisualIndex } = evt;
-                 const draggedOriginalDeskId = draggedItem.dataset.deskId;
-                 if (!draggedOriginalDeskId) { this.renderSeatingChart(); return; }
-                 if (this.state.dragMode === 'swap') {
-                     const targetElement = targetList.children[newVisualIndex];
-                     if (targetElement && targetElement !== draggedItem && targetElement.classList.contains('desk')) {
-                         const isDraggedItemEmpty = draggedItem.classList.contains('empty-seat');
-                         const draggedStudent = isDraggedItemEmpty ? null : this.state.layoutMap.get(draggedOriginalDeskId);
-                         const isTargetEmpty = targetElement.classList.contains('empty-seat');
-                         const targetOriginalDeskId = targetElement.dataset.deskId;
-                         const targetStudent = isTargetEmpty ? null : this.state.layoutMap.get(targetOriginalDeskId);
-                         if (!targetOriginalDeskId) { this.renderSeatingChart(); return; }
-                         if (targetStudent) this.state.layoutMap.set(draggedOriginalDeskId, targetStudent); else this.state.layoutMap.delete(draggedOriginalDeskId);
-                         if (draggedStudent) this.state.layoutMap.set(targetOriginalDeskId, draggedStudent); else this.state.layoutMap.delete(targetOriginalDeskId);
-                         this.renderSeatingChart();
-                         return;
-                     }
-                 }
-                 this.updateLayoutMapBasedOnDOM();
+                    info.innerHTML = `
+                        <div class="student-name-line" title="${student.number} ${student.name}">
+                            ${student.number} 
+                            <span class="name-full">${student.name}</span>
+                            <span class="name-anon">${anonName}</span>
+                            <span class="gender-symbol">${student.gender==='男'?'♂':student.gender==='女'?'♀':''}</span>
+                        </div>
+                        <div class="desk-needs-display">${student.needs || ''}</div>
+                    `;
+                    desk.appendChild(lockBtn);
+                    desk.appendChild(info);
+                    if (desk.dataset.deskId && this.state.lockedDeskIds.has(desk.dataset.deskId)) {
+                        desk.classList.add('is-locked');
+                        lockBtn.querySelector('i').className = 'fas fa-lock';
+                    }
+                    if (student.needs) {
+                        const needsIcon = document.createElement('span');
+                        needsIcon.className = 'needs-icon';
+                        needsIcon.innerHTML = `<i class="fas fa-comment-dots"></i><span class="tooltip">${student.needs}</span>`;
+                        desk.appendChild(needsIcon);
+                    }
+                } else {
+                    desk.classList.add('empty-seat');
+                    desk.innerHTML = '<span class="text-gray-300 text-xs">空位</span>';
+                    if (this.state.seatingMode === 'group') {
+                        const delSeat = document.createElement('div');
+                        delSeat.className = 'delete-seat-btn';
+                        delSeat.innerText = '×';
+                        desk.appendChild(delSeat);
+                    }
+                }
             }
 
-            updateLayoutMapBasedOnDOM() {
-                const newLayoutMap = new Map();
-                let currentDeskCount = 0;
-                const studentMapById = new Map(this.state.students.map(s => [s.id, s]));
+            handleChartClicks(e) {
+                // Handle Lock
+                if (e.target.closest('.lock-btn')) {
+                    const desk = e.target.closest('.desk');
+                    if (desk && desk.dataset.deskId && desk.dataset.studentId) {
+                        this.saveStateToHistory();
+                        const deskId = desk.dataset.deskId;
+                        if (this.state.lockedDeskIds.has(deskId)) {
+                            this.state.lockedDeskIds.delete(deskId);
+                        } else {
+                            this.state.lockedDeskIds.add(deskId);
+                        }
+                        this.renderSeatingChart();
+                        this.saveToLocalStorage();
+                    }
+                    return;
+                }
+                
+                // Handle Delete Seat
+                if (e.target.closest('.delete-seat-btn')) {
+                    this.saveStateToHistory();
+                    this.handleDeleteSeat(e.target.closest('.delete-seat-btn'));
+                    return;
+                }
+                
+                // Handle Delete Group
+                if (e.target.closest('.delete-group-btn')) {
+                    if(confirm('確定要刪除此小組嗎？組員會回到暫存區。')) {
+                        this.saveStateToHistory();
+                        this.handleDeleteGroup(e.target.closest('.delete-group-btn'));
+                    }
+                    return;
+                }
+
+                // Handle Group Name Edit
+                if (e.target.closest('.group-name-display')) {
+                    this.saveStateToHistory();
+                    this.handleGroupNameEditStart(e.target.closest('.group-name-display'));
+                    return;
+                }
+            }
+            
+            // ... (Drag logic - same as before) ...
+            destroySortable() { this.sortableInstances.forEach(s => s.destroy()); this.sortableInstances = []; }
+            initSortable() { const options = { group: 'shared-desks', animation: 150, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', dragClass: 'sortable-drag', onEnd: (evt) => { this.saveStateToHistory(); this.handleSortableDrop(evt); } }; if (this.state.seatingMode === 'traditional') { this.sortableInstances.push(new Sortable(this.elements.seatingChart, options)); } else { this.elements.seatingChart.querySelectorAll('.group-container').forEach(el => { this.sortableInstances.push(new Sortable(el, options)); }); } }
+            initGroupSorting() { this.sortableInstances.push(new Sortable(this.elements.seatingChart, { animation: 150, filter: '.desk', preventOnFilter: false, ghostClass: 'sortable-ghost', onEnd: () => { this.saveStateToHistory(); this.updateLayoutFromDOM(); this.saveToLocalStorage(); } })); }
+            handleSortableDrop(evt) { this.updateLayoutFromDOM(); this.saveToLocalStorage(); }
+            initNativeDrag() { document.querySelectorAll('#seatingChart .desk').forEach(desk => { this.attachNativeEvents(desk); }); }
+            attachNativeEvents(element) { const hasStudent = !!element.dataset.studentId; const isLocked = element.classList.contains('is-locked'); if (hasStudent && !isLocked) { element.setAttribute('draggable', 'true'); element.addEventListener('dragstart', this.handleNativeDragStart); element.addEventListener('dragend', this.handleNativeDragEnd); } else { element.removeAttribute('draggable'); } element.addEventListener('dragover', this.handleNativeDragOver); element.addEventListener('dragleave', this.handleNativeDragLeave); element.addEventListener('drop', this.handleNativeDrop); }
+            handleNativeDragStart(e) { this.currentDragSourceType = e.target.closest('#waitingBench') ? 'bench' : 'desk'; this.currentDragSourceId = this.currentDragSourceType === 'bench' ? e.target.dataset.studentId : e.target.dataset.deskId; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', JSON.stringify({ type: this.currentDragSourceType, id: this.currentDragSourceId })); e.target.classList.add('is-dragging-source'); }
+            handleNativeDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const target = e.target.closest('.desk') || e.target.closest('#waitingBench'); if (target && !target.classList.contains('is-dragging-source')) { target.classList.add('drag-over-target'); } }
+            handleNativeDragLeave(e) { const target = e.target.closest('.desk') || e.target.closest('#waitingBench'); if (target) target.classList.remove('drag-over-target'); }
+            handleNativeDragEnd(e) { e.target.classList.remove('is-dragging-source'); document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); }
+            handleNativeDrop(e) { e.preventDefault(); this.saveStateToHistory(); const sourceData = JSON.parse(e.dataTransfer.getData('text/plain')); const targetElement = e.target.closest('.desk') || e.target.closest('#waitingBench'); if (!targetElement) return; let sourceStudent = null; if (sourceData.type === 'bench') sourceStudent = this.state.students.find(s => s.id === sourceData.id); else sourceStudent = this.state.layoutMap.get(sourceData.id); if (!sourceStudent) return; const isTargetBench = targetElement.id === 'waitingBench' || targetElement.closest('#waitingBench'); if (isTargetBench) { if (sourceData.type === 'desk') { this.state.waitingBench.push(sourceStudent); this.state.layoutMap.delete(sourceData.id); } } else { const targetDeskId = targetElement.dataset.deskId; if (!targetDeskId || this.state.lockedDeskIds.has(targetDeskId)) return; const targetStudent = this.state.layoutMap.get(targetDeskId); this.state.layoutMap.set(targetDeskId, sourceStudent); if (sourceData.type === 'bench') { this.state.waitingBench = this.state.waitingBench.filter(s => s.id !== sourceStudent.id); if (targetStudent) this.state.waitingBench.push(targetStudent); } else { if (targetStudent) this.state.layoutMap.set(sourceData.id, targetStudent); else this.state.layoutMap.delete(sourceData.id); } } this.renderSeatingChart(); this.renderWaitingBench(); this.saveToLocalStorage(); }
+
+            // ... (Layout updates - same) ...
+            updateLayoutFromDOM() { const newLayoutMap = new Map(); const newWaitingBench = []; const studentLookup = new Map(this.state.students.map(s => [s.id, s])); const processContainer = (container, generateIdFn) => { const domDesks = Array.from(container.querySelectorAll('.desk')); domDesks.forEach((desk, idx) => { const studentId = desk.dataset.studentId; const fixedDeskId = generateIdFn(idx); if (fixedDeskId && studentId && studentLookup.has(studentId)) { newLayoutMap.set(fixedDeskId, studentLookup.get(studentId)); } }); }; if (this.state.seatingMode === 'traditional') { const ids = []; const rowIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: this.state.rows }, (_, i) => i) : Array.from({ length: this.state.rows }, (_, i) => this.state.rows - 1 - i); const colIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: this.state.cols }, (_, j) => j) : Array.from({ length: this.state.cols }, (_, j) => this.state.cols - 1 - j); rowIndices.forEach(i => colIndices.forEach(j => ids.push(`r${i}c${j}`))); processContainer(this.elements.seatingChart, (i) => ids[i]); } else { const groupContainers = this.elements.seatingChart.querySelectorAll('.group-container'); groupContainers.forEach(container => { const gKey = container.dataset.groupKey; processContainer(container, (i) => { let slotIdx = i; if (this.state.viewPerspective === 'student') slotIdx = (this.state.studentsPerGroup - 1) - i; if (slotIdx >= 0 && slotIdx < this.state.studentsPerGroup) return `${gKey}d${slotIdx}`; return null; }); }); } const benchElements = document.querySelectorAll('#waitingBench .desk'); benchElements.forEach(el => { const sId = el.dataset.studentId; if(sId && studentLookup.has(sId)) newWaitingBench.push(studentLookup.get(sId)); }); this.state.layoutMap = newLayoutMap; this.state.waitingBench = newWaitingBench; this.updateClassInfo(document.querySelectorAll('#seatingChart .desk').length); }
+            saveToLocalStorage() { const data = { state: { ...this.state, lockedDeskIds: Array.from(this.state.lockedDeskIds), layoutMap: Array.from(this.state.layoutMap.entries()) }, studentText: this.elements.studentsTextarea.value }; localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data)); }
+            loadFromLocalStorage() { const raw = localStorage.getItem(this.STORAGE_KEY); if (!raw) return false; try { const data = JSON.parse(raw); this.restoreState(data); return true; } catch (e) { return false; } }
+            restoreState(data) { const s = data.state; this.state = { ...s, lockedDeskIds: new Set(s.lockedDeskIds), layoutMap: new Map(s.layoutMap) }; this.elements.studentsTextarea.value = data.studentText; this.elements.classNameInput.value = this.state.className; this.elements.rowsInput.value = this.state.rows; this.elements.colsInput.value = this.state.cols; this.elements.numGroupsInput.value = this.state.numGroups; this.elements.studentsPerGroupInput.value = this.state.studentsPerGroup; const modeRadio = document.querySelector(`input[name="seatingMode"][value="${this.state.seatingMode}"]`); if(modeRadio) modeRadio.checked = true; const dragRadio = document.querySelector(`input[name="dragMode"][value="${this.state.dragMode}"]`); if(dragRadio) dragRadio.checked = true; this.updateConditionalInputs(); this.updateUIState(); this.updateCheckboxInputs(); this.renderSeatingChart(); this.renderWaitingBench(); this.updateDisplayOptions(); this.saveToLocalStorage(); }
+            
+            // --- NEW: Save Project to File ---
+            saveProjectToFile() {
+                const data = { 
+                    state: { 
+                        ...this.state, 
+                        lockedDeskIds: Array.from(this.state.lockedDeskIds), 
+                        layoutMap: Array.from(this.state.layoutMap.entries()) 
+                    }, 
+                    studentText: this.elements.studentsTextarea.value,
+                    version: '1.0'
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json;charset=utf-8"});
+                saveAs(blob, `${this.state.className || '教室座位專案'}.json`);
+            }
+
+            // --- NEW: Load Project from File ---
+            loadProjectFromFile(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = JSON.parse(evt.target.result);
+                        this.restoreState(data);
+                        this.saveStateToHistory();
+                        alert('專案讀取成功！');
+                    } catch (err) {
+                        console.error(err);
+                        alert('讀取失敗：檔案格式錯誤');
+                    }
+                    e.target.value = ''; // Reset input
+                };
+                reader.readAsText(file);
+            }
+
+            // ... (Helpers - same) ...
+            parseStudents(text) { const list = []; text.split('\n').forEach(line => { const parts = line.trim().split(/\s+/); if (parts.length >= 2) { const num = parts[0]; const name = parts[1]; const genderRaw = parts[2] ? parts[2].toLowerCase() : ''; const gender = (['男','m'].includes(genderRaw)) ? '男' : (['女','f'].includes(genderRaw)) ? '女' : '其他'; const needs = parts.slice(3).join(' '); const id = `s_${num}_${name}`; list.push({ id, number: num, name, gender, needs }); } }); return list; }
+            shuffleArray(array) { const newArr = [...array]; for (let i = newArr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [newArr[i], newArr[j]] = [newArr[j], newArr[i]]; } return newArr; }
+            updateClassName() { this.state.className = this.elements.classNameInput.value.trim(); this.elements.webClassName.textContent = this.state.className; this.elements.printClassName.textContent = this.state.className || '座位表'; }
+            updateConditionalInputs() { const isTrad = this.state.seatingMode === 'traditional'; this.elements.traditionalInputsDiv.classList.toggle('hidden', !isTrad); this.elements.groupInputsDiv.classList.toggle('hidden', isTrad); this.elements.addGroupBtn.classList.toggle('hidden', isTrad); }
+            updateUIState() { this.elements.perspectiveToggleBtn.innerHTML = `<i class="fas fa-sync-alt mr-1"></i> ${this.state.viewPerspective==='teacher'?'老師視角':'學生視角'}`; const bbIcon = this.state.showBlackboard ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>'; const tdIcon = this.state.showTeacherDesk ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>'; this.elements.toggleBlackboardBtn.innerHTML = `${bbIcon} 黑板`; this.elements.toggleTeacherDeskBtn.innerHTML = `${tdIcon} 講桌`; this.elements.blackboardObject.classList.toggle('hidden', !this.state.showBlackboard); this.elements.teacherDeskObject.classList.toggle('hidden', !this.state.showTeacherDesk); this.updateClassInfo(this.state.layoutMap.size + this.getEmptyDeskIds().length); }
+            updateClassInfo(total) { const assigned = this.state.layoutMap.size; const bench = this.state.waitingBench.length; this.elements.classInfo.innerHTML = `座位: ${total} | 已排: ${assigned} | 空位: ${Math.max(0, total - assigned)} | 暫存區: ${bench}`; }
+            renderClassroomObjects() { const topDiv = this.elements.classroomObjectsContainerTop; const botDiv = this.elements.classroomObjectsContainerBottom; const tdTop = this.elements.teacherDeskContainerTop; const tdBot = this.elements.teacherDeskContainerBottom; topDiv.innerHTML = ''; botDiv.innerHTML = ''; tdTop.innerHTML = ''; tdBot.innerHTML = ''; const bb = this.elements.blackboardObject; const td = this.elements.teacherDeskObject; if (this.state.viewPerspective === 'teacher') { if (this.state.showBlackboard) topDiv.appendChild(bb); if (this.state.showTeacherDesk) tdTop.appendChild(td); } else { if (this.state.showBlackboard) botDiv.appendChild(bb); if (this.state.showTeacherDesk) tdBot.appendChild(td); } }
+            handleModeChange(mode) { const currentGridStudents = []; this.state.layoutMap.forEach(s => currentGridStudents.push(s)); this.state.seatingMode = mode; this.updateConditionalInputs(); this.state.layoutMap.clear(); this.state.lockedDeskIds.clear(); const newDeskIds = this.generateAllDeskIds(); let sIdx = 0; newDeskIds.forEach(id => { if (sIdx < currentGridStudents.length) { this.state.layoutMap.set(id, currentGridStudents[sIdx++]); } }); while(sIdx < currentGridStudents.length) { this.state.waitingBench.push(currentGridStudents[sIdx++]); } this.renderSeatingChart(); this.renderWaitingBench(); this.saveToLocalStorage(); }
+            updateConfigFromInputsAndRender() { this.state.rows = parseInt(this.elements.rowsInput.value); this.state.cols = parseInt(this.elements.colsInput.value); this.state.numGroups = parseInt(this.elements.numGroupsInput.value); this.state.studentsPerGroup = parseInt(this.elements.studentsPerGroupInput.value); this.arrangeSeats(); }
+            togglePerspective() { this.state.viewPerspective = this.state.viewPerspective === 'teacher' ? 'student' : 'teacher'; this.updateUIState(); this.renderSeatingChart(); }
+            addNewGroup() { if(this.state.seatingMode !== 'group') return; const gIdx = this.nextGroupId++; const gKey = `g${gIdx}`; this.state.groupNames[gKey] = `新小組 ${gIdx+1}`; const container = this.createGroupContainer(gKey, gIdx); for(let i=0; i<this.state.studentsPerGroup; i++) container.appendChild(this.createDeskElement(`${gKey}d${i}`, null)); const chart = this.elements.seatingChart; if(this.state.viewPerspective === 'student') chart.prepend(container); else chart.appendChild(container); if(this.state.seatingMode === 'group') this.initGroupSorting(); if(this.state.dragMode === 'insert') this.initSortable(); else this.initNativeDrag(); }
+            handleDeleteSeat(btn) { const desk = btn.closest('.desk'); const id = desk.dataset.deskId; if(id) { this.state.layoutMap.delete(id); this.state.lockedDeskIds.delete(id); } desk.remove(); if(this.state.dragMode === 'insert') this.updateLayoutFromDOM(); this.saveToLocalStorage(); }
+            handleDeleteGroup(btn) { const group = btn.closest('.group-container'); const key = group.dataset.groupKey; group.querySelectorAll('.desk').forEach(d => { const sid = d.dataset.studentId; if(sid) { const s = this.state.students.find(x=>x.id===sid); if(s) this.state.waitingBench.push(s); } }); delete this.state.groupNames[key]; group.remove(); if(this.state.dragMode === 'insert') this.updateLayoutFromDOM(); this.renderWaitingBench(); this.saveToLocalStorage(); }
+            handleGroupNameEditStart(el) { const input = el.nextElementSibling; el.classList.add('editing'); input.classList.add('editing'); input.focus(); }
+            handleGroupNameEditEnd(input) { const display = input.previousElementSibling; const group = input.closest('.group-container'); const key = group.dataset.groupKey; this.state.groupNames[key] = input.value; display.textContent = input.value; input.classList.remove('editing'); display.classList.remove('editing'); this.saveToLocalStorage(); }
+            
+            // --- EXPORT TO IMAGE ---
+            async exportLayoutImage() {
+                const layoutDiv = this.elements.classroomLayout;
+                this.elements.classInfo.style.display = 'none'; // Hide Status
+                this.elements.printClassName.textContent = this.state.className || '座位表'; 
+                this.elements.printClassName.classList.remove('hidden');
+                this.elements.webClassName.style.display = 'none';
+                
+                const trashBtns = document.querySelectorAll('.delete-seat-btn, .delete-group-btn');
+                trashBtns.forEach(btn => btn.style.display = 'none');
+
+                try {
+                    const canvas = await html2canvas(layoutDiv, {
+                        scale: 2, 
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        ignoreElements: (node) => node.classList.contains('no-print') 
+                    });
+                    
+                    canvas.toBlob((blob) => {
+                        saveAs(blob, `${this.state.className || '座位表'}.png`);
+                    });
+                } catch (err) {
+                    console.error("Export failed", err);
+                    alert("匯出圖片失敗，請重試");
+                } finally {
+                    this.elements.classInfo.style.display = ''; 
+                    this.elements.printClassName.classList.add('hidden');
+                    this.elements.webClassName.style.display = '';
+                    trashBtns.forEach(btn => btn.style.display = '');
+                }
+            }
+
+            // --- EXPORT TO WORD ---
+            async exportSeatingLayout() {
+                if(this.state.dragMode === 'insert') this.updateLayoutFromDOM();
+
+                const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType } = docx;
+
+                const title = new Paragraph({
+                    text: this.state.className || "教室座位表",
+                    heading: HeadingLevel.HEADING_1,
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 300 }
+                });
+
+                const info = new Paragraph({
+                    text: `匯出時間: ${new Date().toLocaleString()}`,
+                    alignment: AlignmentType.RIGHT,
+                    spacing: { after: 200 }
+                });
+
+                // Helper to format student text based on settings
+                const getStudentText = (student) => {
+                    if (!student) return "";
+                    let name = student.name;
+                    if (this.state.showAnonymous) name = this.anonymizeName(name);
+                    let text = `${student.number} ${name}`;
+                    if (this.state.showGenderSymbol) text += (student.gender==='男' ? ' ♂' : student.gender==='女' ? ' ♀' : '');
+                    if (this.state.showNeeds && student.needs) text += `\n(${student.needs})`;
+                    return text;
+                };
+
+                let contentTable;
+
                 if (this.state.seatingMode === 'traditional') {
-                    this.elements.seatingChart.querySelectorAll('.desk').forEach((deskElement) => {
-                        currentDeskCount++;
-                        const deskId = deskElement.dataset.deskId; if (!deskId) return;
-                        const studentId = deskElement.dataset.studentId;
-                        if (studentId && !deskElement.classList.contains('empty-seat')) { const student = studentMapById.get(studentId); if (student) newLayoutMap.set(deskId, student); }
+                    const rows = [];
+                    for (let i = 0; i < this.state.rows; i++) {
+                        const cells = [];
+                        for (let j = 0; j < this.state.cols; j++) {
+                            const s = this.state.layoutMap.get(`r${i}c${j}`);
+                            const cellText = getStudentText(s);
+                            cells.push(new TableCell({
+                                children: [new Paragraph({ text: cellText, alignment: AlignmentType.CENTER })],
+                                width: { size: 100 / this.state.cols, type: WidthType.PERCENTAGE },
+                                verticalAlign: "center",
+                                height: { value: 1000, rule: "atLeast" }
+                            }));
+                        }
+                        rows.push(new TableRow({ children: cells }));
+                    }
+                    contentTable = new Table({
+                        rows: rows,
+                        width: { size: 100, type: WidthType.PERCENTAGE }
                     });
                 } else {
-                    this.elements.seatingChart.querySelectorAll('.group-container').forEach((container) => {
-                        const groupKey = container.dataset.groupKey; if (!groupKey) return;
-                        const groupDesks = Array.from(container.querySelectorAll('.desk')); currentDeskCount += groupDesks.length;
-                        groupDesks.forEach((deskElement, visualDeskIndex) => {
-                             const newDeskId = `${groupKey}d${visualDeskIndex}`; deskElement.dataset.deskId = newDeskId;
-                             const studentId = deskElement.dataset.studentId;
-                             if (studentId && !deskElement.classList.contains('empty-seat')) { const student = studentMapById.get(studentId); if (student) newLayoutMap.set(newDeskId, student); }
+                    const rows = [];
+                    // Group Header
+                    rows.push(new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({text: "小組名稱", bold: true})], width: {size: 30, type: WidthType.PERCENTAGE} }),
+                            new TableCell({ children: [new Paragraph({text: "成員", bold: true})], width: {size: 70, type: WidthType.PERCENTAGE} })
+                        ]
+                    }));
+
+                    const groups = document.querySelectorAll('.group-container');
+                    groups.forEach(g => {
+                        const name = g.querySelector('.group-name-display').textContent;
+                        const students = [];
+                        g.querySelectorAll('.desk').forEach(d => {
+                            const sid = d.dataset.studentId;
+                            if(sid) {
+                                const s = this.state.students.find(x => x.id === sid);
+                                if(s) students.push(getStudentText(s).replace('\n', ' '));
+                            }
                         });
+                        
+                        // Only add group if not hidden via empty settings
+                        if (!this.state.showEmptySeats && students.length === 0) return;
+
+                        rows.push(new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph(name)] }),
+                                new TableCell({ children: [new Paragraph(students.join(', '))] })
+                            ]
+                        }));
+                    });
+
+                    contentTable = new Table({
+                        rows: rows,
+                        width: { size: 100, type: WidthType.PERCENTAGE }
                     });
                 }
-                this.state.layoutMap = newLayoutMap;
-                this.updateClassInfo(currentDeskCount, this.state.layoutMap.size);
+
+                const doc = new Document({
+                    sections: [{
+                        properties: {},
+                        children: [title, info, contentTable],
+                    }],
+                });
+
+                const blob = await Packer.toBlob(doc);
+                saveAs(blob, `${this.state.className || '座位表'}.docx`);
             }
 
-            handleDeleteSeat(deleteButton) { if (this.state.seatingMode !== 'group') return; const deskElement = deleteButton.closest('.desk.empty-seat'); if (!deskElement) return; const groupContainer = deskElement.closest('.group-container'); if (!groupContainer) return; const deskId = deskElement.dataset.deskId; if(deskId) this.state.layoutMap.delete(deskId); deskElement.remove(); this.updateLayoutMapBasedOnDOM(); }
-            handleDeleteGroup(deleteButton) { if (this.state.seatingMode !== 'group') return; const groupContainer = deleteButton.closest('.group-container'); if (!groupContainer) return; const groupKey = groupContainer.dataset.groupKey; const sortableInstance = this.sortableInstances.find(inst => inst.el === groupContainer); if (sortableInstance) { try { sortableInstance.destroy(); } catch (e) {} this.sortableInstances = this.sortableInstances.filter(inst => inst !== sortableInstance); } if(groupKey) delete this.state.groupNames[groupKey]; groupContainer.remove(); this.updateLayoutMapBasedOnDOM(); }
-            
-            addNewGroup() {
-                 if (this.state.seatingMode !== 'group') return;
-                 const newGroupIndex = this.nextGroupId++; const newGroupKey = `g${newGroupIndex}`;
-                 this.state.groupNames[newGroupKey] = `第 ${newGroupIndex + 1} 組`;
-                 const groupContainer = this.createGroupContainerElement(newGroupKey);
-                 const initialSeats = Math.max(1, this.state.studentsPerGroup);
-                 for (let s = 0; s < initialSeats; s++) { const deskId = `${newGroupKey}d${s}`; groupContainer.appendChild(this.createDeskElement(deskId, null)); }
-                 const chart = this.elements.seatingChart;
-                 if(this.state.viewPerspective === 'student'){ chart.insertBefore(groupContainer, chart.firstChild); } else { chart.appendChild(groupContainer); }
-                 const deskSortable = new Sortable(groupContainer, { group: 'shared-desks', animation: 150, ghostClass: 'sortable-ghost', chosenClass: "sortable-chosen", dragClass: "sortable-drag", forceFallback: false, onEnd: (evt) => this.handleDragEnd(evt) });
-                 this.sortableInstances.push(deskSortable);
-                 this.updateLayoutMapBasedOnDOM();
+            generateExcelTemplate(e) { e.preventDefault(); const wb = this.xlsx.utils.book_new(); const wsData = [ ['座號', '姓名', '性別', '需求'], ['1', '公小民', '男', '需要提醒'], ['2', '邱小瑜', '女', '沉癮AI無法自拔'], ['3', '陳大德', 'M', ''], ['4', '林美盛', 'F', '視力不好'], ['5', '王小俐', 'F', ''] ]; const ws = this.xlsx.utils.aoa_to_sheet(wsData); ws['!cols'] = [ { wch: 8 }, { wch: 12 }, { wch: 6 }, { wch: 25 } ]; this.xlsx.utils.book_append_sheet(wb, ws, '學生名單'); this.xlsx.writeFile(wb, '學生名單範本.xlsx'); }
+            importStudentsFromExcel(e) {
+                const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const workbook = this.xlsx.read(evt.target.result, {type:'binary'}); const sheet = workbook.Sheets[workbook.SheetNames[0]]; const json = this.xlsx.utils.sheet_to_json(sheet, {header:1});
+                    let txt = "";
+                    for(let i=1; i<json.length; i++) { const row = json[i]; if(row[0] && row[1]) txt += `${row[0]} ${row[1]} ${row[2]||''} ${row[3]||''}\n`; }
+                    this.elements.studentsTextarea.value = txt; this.saveToLocalStorage(); alert('匯入完成，請點擊「刷新名單」');
+                }; reader.readAsBinaryString(file);
             }
-
-            handlePrint() {
-                 this.elements.printClassName.textContent = this.state.className || '座位表'; this.elements.printClassName.classList.remove('hidden');
-                 this.tempPrintClasses.emptyGroups.clear();
-                 this.elements.body.classList.toggle('print-hide-needs', !this.state.printNeeds);
-                 this.elements.body.classList.toggle('print-hide-gender', !this.state.printGender);
-                 this.elements.body.classList.toggle('print-hide-empty', !this.state.printEmptySeats);
-                 this.elements.body.classList.toggle('print-hide-group-names', !this.state.printGroupNames);
-                 if (!this.state.printEmptySeats && this.state.seatingMode === 'group') {
-                     this.elements.seatingChart.querySelectorAll('.group-container').forEach(container => {
-                         const hasStudents = container.querySelector('.desk:not(.empty-seat)');
-                         if (!hasStudents) { container.classList.add('print-empty-group'); this.tempPrintClasses.emptyGroups.add(container); }
-                     });
-                 }
-                 window.print();
-            }
-            _cleanupAfterPrint() {
-                 this.elements.body.classList.remove('print-hide-needs', 'print-hide-gender', 'print-hide-empty', 'print-hide-group-names');
-                 this.tempPrintClasses.emptyGroups.forEach(container => { container.classList.remove('print-empty-group'); });
-                 this.tempPrintClasses.emptyGroups.clear();
-                 this.elements.printClassName.textContent = ''; this.elements.printClassName.classList.add('hidden');
-            }
-            setupPrintListener() { const afterPrintHandler = () => this._cleanupAfterPrint(); if (window.matchMedia) { const mediaQueryList = window.matchMedia('print'); const handleChange = (mql) => { if (!mql.matches) { afterPrintHandler(); } }; if (mediaQueryList.addEventListener) { mediaQueryList.addEventListener('change', handleChange); } else if (mediaQueryList.addListener) { mediaQueryList.addListener(handleChange); } } window.onafterprint = afterPrintHandler; }
-            getNeedsIcon(needs) { if (!needs) return 'fa-comment-dots'; const l = needs.toLowerCase(); if (l.includes('視力')||l.includes('vision')) return 'fa-eye'; if (l.includes('聽力')||l.includes('hearing')) return 'fa-ear-listen'; if (l.includes('協助')||l.includes('support')) return 'fa-hands-helping'; if (l.includes('行動')||l.includes('mobility')) return 'fa-wheelchair'; if (l.includes('過動')||l.includes('adhd')) return 'fa-bolt'; if (l.includes('提醒')||l.includes('prompt')) return 'fa-bell'; if (l.includes('安靜')||l.includes('quiet')) return 'fa-volume-xmark'; if (l.includes('資優')||l.includes('gifted')) return 'fa-star'; if (l.includes('學習')||l.includes('learn')) return 'fa-book-open-reader'; if (l.includes('情緒')||l.includes('emotion')) return 'fa-face-sad-tear'; return 'fa-comment-dots'; }
-            updateClassInfo(totalDeskCount, assignedCount) { const emptySeats = Math.max(0, totalDeskCount - assignedCount); this.elements.classInfo.innerHTML = `座位總數: <span class="font-medium">${totalDeskCount}</span> | 已排人數: <span class="text-blue-600 font-medium">${assignedCount}</span> | 空位數: <span class="text-green-600 font-medium">${emptySeats}</span>`; }
-            
-            generateExcelTemplate(e) { e.preventDefault(); const wb = this.xlsx.utils.book_new(); const wsData = [ ['座號', '姓名', '性別', '需求'], ['1', '公小民', '男', '需要提醒'], ['2', '邱小瑜', '女', '沉癮AI無法自拔'], ['3', '陳大德', 'Male', ''], ['4', '林美盛', 'F', '視力不好'], ['5', '王小俐', 'F', ''] ]; const ws = this.xlsx.utils.aoa_to_sheet(wsData); ws['!cols'] = [ { wch: 8 }, { wch: 12 }, { wch: 6 }, { wch: 25 } ]; this.xlsx.utils.book_append_sheet(wb, ws, '學生名單'); this.xlsx.writeFile(wb, '學生名單範本.xlsx'); }
-            
-            importStudentsFromExcel() {
-                 const fileInput = this.elements.excelFile; if (!fileInput.files || fileInput.files.length === 0) { alert('請選擇 Excel 檔案！'); return; } const file = fileInput.files[0]; const reader = new FileReader();
-                 reader.onload = (e) => { try {
-                     const data = new Uint8Array(e.target.result); const workbook = this.xlsx.read(data, { type: 'array' }); const firstSheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[firstSheetName];
-                     const jsonDataRaw = this.xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '', blankrows: false }); const jsonData = jsonDataRaw.filter(row => Array.isArray(row) && row.some(cell => cell !== null && String(cell).trim() !== '')); if (jsonData.length === 0) { alert('Excel 檔案似乎是空的。'); return; }
-                     let headerRowIndex = -1; let headers = {}; const headerKeywords = { number: ['座號', '學號'], name: ['姓名'], gender: ['性別'], needs: ['需求', '註記', '備註'] };
-                     for (let i = 0; i < Math.min(5, jsonData.length); i++) { const row = jsonData[i]; const potentialHeaders = row.map(cell => String(cell).trim().toLowerCase()); let tempHeaders = {}; potentialHeaders.forEach((headerText, colIndex) => { for (const key in headerKeywords) { if (headerKeywords[key].includes(headerText)) { tempHeaders[key] = colIndex; break; } } }); if (tempHeaders.name !== undefined && (tempHeaders.gender !== undefined || tempHeaders.number !== undefined)) { headers = tempHeaders; headerRowIndex = i; break; } }
-                     let dataStartIndex = 0; if (headerRowIndex !== -1) { dataStartIndex = headerRowIndex + 1; if (headers.name === undefined || (headers.gender === undefined && headers.number === undefined) ) { alert("無法可靠識別 '姓名' 和 '性別'/'座號' 欄位。"); headers = { number: 0, name: 1, gender: 2, needs: 3 }; dataStartIndex = 0; } } else { alert('未偵測到標頭列，將嘗試預設 A, B, C, D 欄位。'); headers = { number: 0, name: 1, gender: 2, needs: 3 }; dataStartIndex = 0; }
-                     let studentListText = ''; for (let i = dataStartIndex; i < jsonData.length; i++) { const row = jsonData[i]; const number = String(row[headers.number] ?? '').trim(); const name = String(row[headers.name] ?? '').trim(); const gender = String(row[headers.gender] ?? '').trim(); const needs = String(row[headers.needs] ?? '').trim(); if (name && (number || gender)) { studentListText += `${number || '?'} ${name} ${gender || '未知'}${needs ? ' ' + needs : ''}\n`; } }
-                     if (!studentListText) { alert('在 Excel 中找不到有效的學生資料。'); return; }
-                     this.elements.studentsTextarea.value = studentListText.trim(); fileInput.value = '';
-                     this.arrangeSeats(); alert('學生名單已成功從 Excel 匯入並重新排列座位！');
-                 } catch (error) { console.error("Excel import error:", error); alert(`讀取 Excel 失敗：${error.message}`); } };
-                 reader.onerror = (error) => { console.error("File reading error:", error); alert('無法讀取檔案。'); }; reader.readAsArrayBuffer(file);
-            }
-            exportSeatingLayout() {
-                 this.updateLayoutMapBasedOnDOM();
-                 const totalDeskCount = this.elements.seatingChart.querySelectorAll('.desk').length; if (this.state.layoutMap.size === 0 && totalDeskCount === 0) { alert("沒有座位資料可匯出。"); return; }
-                 const wb = this.xlsx.utils.book_new(); const wsData = []; const EMPTY_SEAT_TEXT = '--- 空位 ---';
-                 if (this.state.seatingMode === 'traditional') {
-                     wsData.push(['座位表 (傳統模式)']); wsData.push([`班級: ${this.state.className || '(未命名)'}`]); wsData.push([]);
-                     const rows = this.state.rows; const cols = this.state.cols;
-                     const rowIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: rows }, (_, i) => i) : Array.from({ length: rows }, (_, i) => rows - 1 - i);
-                     const colIndices = this.state.viewPerspective === 'teacher' ? Array.from({ length: cols }, (_, j) => j) : Array.from({ length: cols }, (_, j) => cols - 1 - j);
-                     const headerRow = ['列 \\ 行']; colIndices.forEach(j => headerRow.push(`第 ${j + 1} 行`)); wsData.push(headerRow);
-                     rowIndices.forEach(i => { const rowData = [`第 ${i + 1} 列`]; colIndices.forEach(j => { const seatId = `r${i}c${j}`; const student = this.state.layoutMap.get(seatId); rowData.push(student ? `${student.number||'?'} ${student.name||'?'} (${student.gender||'?'})${student.needs ? ` [${student.needs}]`:''}` : EMPTY_SEAT_TEXT); }); wsData.push(rowData); });
-                 } else {
-                     wsData.push(['座位表 (小組模式)']); wsData.push([`班級: ${this.state.className || '(未命名)'}`]); wsData.push([]);
-                     wsData.push(['小組名稱', '組內順序 (依畫面)', '學生 (座號 姓名 性別 [需求])']);
-                     const groupContainers = Array.from(this.elements.seatingChart.querySelectorAll('.group-container'));
-                     if (groupContainers.length === 0) { wsData.push(['(沒有任何小組)', '', '']); } else {
-                         groupContainers.forEach((container) => {
-                             const groupKey = container.dataset.groupKey; const groupIndex = parseInt(groupKey?.substring(1) ?? -1); const groupNameState = this.state.groupNames[groupKey]; const groupName = (groupNameState === undefined || groupNameState === null) ? `第 ${groupIndex + 1} 組` : (groupNameState === '' ? '(未命名小組)' : groupNameState);
-                             wsData.push([`--- ${groupName} ---`, '', '']);
-                             const desks = Array.from(container.querySelectorAll('.desk'));
-                             if (desks.length === 0) { wsData.push(['', '(此組無座位)', '']); } else {
-                                 desks.forEach((desk, visualSeatIndex) => { const deskId = desk.dataset.deskId; const student = this.state.layoutMap.get(deskId); wsData.push(['', `座位 ${visualSeatIndex + 1}`, student ? `${student.number||'?'} ${student.name||'?'} (${student.gender||'?'})${student.needs ? ` [${student.needs}]`:''}` : EMPTY_SEAT_TEXT]); });
-                             }
-                             wsData.push([]);
-                         });
-                     }
-                 }
-                 const ws = this.xlsx.utils.aoa_to_sheet(wsData); const colWidths = wsData.reduce((widths, row) => { row.forEach((cell, colIndex) => { const cellLen = cell ? String(cell).length : 0; widths[colIndex] = Math.max(widths[colIndex] || 8, cellLen + 2); }); return widths; }, []); ws['!cols'] = colWidths.map(wch => ({ wch: Math.min(wch, 50) }));
-                 const sheetName = (this.state.className || '座位表').substring(0, 30); this.xlsx.utils.book_append_sheet(wb, ws, sheetName);
-                 const date = new Date(); const dateString = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-                 const filename = `${this.state.className || '座位表'}_佈局_${dateString}.xlsx`;
-                 try { this.xlsx.writeFile(wb, filename); } catch (e) { console.error("Excel export error:", e); alert(`匯出失敗: ${e.message}`); }
-            }
-
-            shuffleArray(array) { const newArray = [...array]; for (let i = newArray.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [newArray[i], newArray[j]] = [newArray[j], newArray[i]]; } return newArray; }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof XLSX === 'undefined') { alert("錯誤：無法載入 Excel 函式庫。"); }
-            if (typeof Sortable === 'undefined') { alert("錯誤：無法載入拖曳排序函式庫。"); }
-            if (typeof FileSaver === 'undefined') { alert("錯誤：無法載入檔案儲存函式庫。"); }
-            window.classroomManager = new ClassroomSeatingManager();
-
-            // --- NEW: Mascot Interaction Logic ---
-            const mascotElement = document.getElementById('mascot');
-            if (mascotElement) {
-                function createParticle(x, y) {
-                    const particle = document.createElement('div');
-                    particle.className = 'particle';
-                    document.body.appendChild(particle);
-
-                    const size = Math.floor(Math.random() * 10 + 5);
-                    const colors = ['#06b6d4', '#3b82f6', '#8b5cf6', '#f97316', '#ec4899', '#10b981', '#7c3aed']; // cyan, blue, purple, orange, pink, teal, violet
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    
-                    particle.style.width = `${size}px`;
-                    particle.style.height = `${size}px`;
-                    particle.style.background = color;
-                    particle.style.left = `${x - size / 2}px`;
-                    particle.style.top = `${y - size / 2}px`;
-
-                    const destinationX = (Math.random() - 0.5) * 300;
-                    const destinationY = (Math.random() - 0.5) * 300;
-                    const rotation = Math.random() * 520;
-                    
-                    requestAnimationFrame(() => {
-                        particle.style.transform = `translate(${destinationX}px, ${destinationY}px) rotate(${rotation}deg)`;
-                        particle.style.opacity = '0';
-                    });
-                    
-                    setTimeout(() => {
-                        particle.remove();
-                    }, 1000);
-                }
-
-                mascotElement.addEventListener('click', (e) => {
-                    for (let i = 0; i < 30; i++) {
-                        createParticle(e.clientX, e.clientY);
-                    }
+            initMascotDrag() {
+                const mascot = document.getElementById('mascot');
+                let isDragging = false; let currentX; let currentY; let initialX; let initialY; let xOffset = 0; let yOffset = 0;
+                const dragStart = (e) => { initialX = e.clientX - xOffset; initialY = e.clientY - yOffset; if (e.target === mascot) isDragging = true; };
+                const dragEnd = (e) => { initialX = currentX; initialY = currentY; isDragging = false; this.saveToLocalStorage(); };
+                const drag = (e) => { if (isDragging) { e.preventDefault(); currentX = e.clientX - initialX; currentY = e.clientY - initialY; xOffset = currentX; yOffset = currentY; mascot.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`; } };
+                mascot.addEventListener("mousedown", dragStart); document.addEventListener("mouseup", dragEnd); document.addEventListener("mousemove", drag);
+                mascot.addEventListener('click', (e) => {
+                   if(!isDragging) { for(let i=0; i<15; i++) { const p = document.createElement('div'); p.className = 'particle'; p.style.backgroundColor = `hsl(${Math.random()*360}, 70%, 50%)`; p.style.left = e.clientX + 'px'; p.style.top = e.clientY + 'px'; document.body.appendChild(p); const angle = Math.random() * Math.PI * 2; const velocity = Math.random() * 100 + 50; const tx = Math.cos(angle) * velocity; const ty = Math.sin(angle) * velocity; requestAnimationFrame(() => { p.style.transform = `translate(${tx}px, ${ty}px) scale(0)`; p.style.opacity = 0; }); setTimeout(()=>p.remove(), 1000); } }
                 });
             }
-        });
+        }
+        document.addEventListener('DOMContentLoaded', () => { window.app = new ClassroomSeatingManager(); });
     </script>
+<footer class="bg-gray-800 text-white py-3 no-print mt-auto">
+        <div class="container mx-auto px-4 text-center text-xs">
+            <p>Copyright © Liyuchiutiger Gongminshen</p>
+        </div>
+    </footer>
 </body>
 </html>
