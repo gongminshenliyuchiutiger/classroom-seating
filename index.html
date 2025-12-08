@@ -134,6 +134,10 @@
 
         /* No Print Utility */
         .no-print { } /* Used by JS to filter html2canvas */
+        
+        @media print {
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="text-gray-800 min-h-screen flex flex-col">
@@ -817,7 +821,7 @@
                 desk.classList.remove('empty-seat', 'male', 'female', 'is-locked');
                 delete desk.dataset.studentId;
                 const lockBtn = document.createElement('div');
-                lockBtn.className = 'lock-btn';
+                lockBtn.className = 'lock-btn no-print'; // Changed: Added no-print class here
                 lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
                 
                 if (student) {
