@@ -31,9 +31,10 @@
         html, body { max-width: 100%; overflow-x: hidden; }
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; font-size: 14px; }
 
-        /* 側邊欄收合 / 投影全寬模式（全裝置皆生效） */
+        /* 側邊欄收合 / 投影全寬模式（平滑置中不偏移） */
         body.sidebar-collapsed #controls-column { display: none !important; }
-        body.sidebar-collapsed #preview-column { grid-column: 1 / -1 !important; }
+        body.sidebar-collapsed #preview-column { grid-column: 1 / -1 !important; max-width: 100%; }
+        #seatingChartInnerFrame { display: flex; align-items: stretch; gap: 6px; width: fit-content; min-width: min(100%, 640px); margin: 0 auto; }
 
         /* 控制欄分頁 */
         .tab-btn { flex: 1; padding: 0.6rem 0.35rem; font-size: 0.8rem; font-weight: 600; color: #64748b; border-bottom: 2px solid transparent; transition: all 0.2s; text-align: center; cursor: pointer; white-space: nowrap; }
@@ -143,10 +144,28 @@
         .mode-traditional .desk:not(.empty-seat):not(.is-locked):not(.is-disabled) { border-color: #93c5fd; }
         .mode-traditional .empty-seat { background-color: #f8fafc; border-color: #e2e8f0; color: #94a3b8; cursor: grab; }
 
-        /* 分組模式主容器：支援自動 Flex 或固定每排 N 組 Grid */
+        /* 分組模式主容器：支援自動 Flex、固定每排 N 組 Grid 或自由畫布拖曳定位 */
         #seatingChart.mode-group { padding: 10px; }
         #seatingChart.mode-group.groups-per-row-auto { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: flex-start; }
         #seatingChart.mode-group.groups-per-row-fixed { display: grid; gap: 14px; justify-content: center; justify-items: center; align-items: start; }
+        #seatingChart.mode-group.groups-per-row-free {
+            position: relative;
+            display: block;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-color: #ffffff;
+            overflow: visible;
+        }
+        #seatingChart.mode-group.groups-per-row-free .group-container {
+            position: absolute;
+            margin: 0 !important;
+            touch-action: none;
+        }
+        #seatingChart.mode-group.groups-per-row-free .group-container.is-moving-group {
+            z-index: 95;
+            box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+            transition: none;
+        }
 
         /* 分組容器 */
         .group-container {
@@ -176,6 +195,11 @@
             border-radius: 0.35rem;
             background-color: rgba(255, 255, 255, 0.85);
             border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+            transition: background-color 0.15s, box-shadow 0.15s;
+        }
+        .group-header-bar.transfer-drop-target {
+            background-color: #dbeafe !important;
+            box-shadow: 0 0 0 2px #2563eb !important;
         }
         .group-name-wrap { display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1; }
         .group-name-display { font-size: 12px; font-weight: 700; color: #334155; padding: 1px 4px; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; transition: background-color 0.2s; }
@@ -209,12 +233,89 @@
             margin: 0;
             transform-origin: center center;
         }
+        #seatingChart.mode-freeform.freeform-edit-mode {
+            cursor: crosshair;
+            user-select: none;
+            -webkit-user-select: none;
+        }
         #seatingChart.mode-freeform.freeform-edit-mode .desk {
             cursor: move !important;
             touch-action: none;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.16);
             border-color: #60a5fa;
         }
+        /* 自由畫布自訂空間區 / 走道 / 障礙物 */
+        .free-space-zone {
+            --item-rotate: 0deg;
+            transform: rotate(var(--item-rotate));
+            transform-origin: center center;
+            position: absolute;
+            background: repeating-linear-gradient(45deg, rgba(241, 245, 249, 0.9), rgba(241, 245, 249, 0.9) 7px, rgba(226, 232, 240, 0.9) 7px, rgba(226, 232, 240, 0.9) 14px);
+            border: 2px dashed #94a3b8;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 4;
+            color: #475569;
+            font-weight: 700;
+            font-size: 12px;
+            user-select: none;
+        }
+        #seatingChart.mode-freeform.freeform-edit-mode .free-space-zone,
+        #seatingChart.mode-group.groups-per-row-free .free-space-zone {
+            cursor: move;
+            border-color: #f97316;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15);
+            touch-action: none;
+        }
+        .free-space-label { padding: 2px 8px; background: rgba(255, 255, 255, 0.85); border-radius: 999px; cursor: pointer; }
+        .free-space-input { font-size: 12px; width: 96px; text-align: center; border: 1px solid #f97316; border-radius: 4px; padding: 1px 4px; outline: none; display: none; background: white; }
+        .free-space-label.editing { display: none; }
+        .free-space-input.editing { display: inline-block; }
+        .free-zone-controls {
+            display: none;
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #9a3412;
+            color: white;
+            border-radius: 999px;
+            padding: 2px 6px;
+            gap: 4px;
+            align-items: center;
+            z-index: 85;
+            white-space: nowrap;
+        }
+        .free-zone-controls::after {
+            content: '';
+            position: absolute;
+            left: -6px;
+            right: -6px;
+            bottom: -10px;
+            height: 10px;
+        }
+        #seatingChart.mode-freeform.freeform-edit-mode .free-space-zone:hover .free-zone-controls,
+        #seatingChart.mode-freeform.freeform-edit-mode .free-space-zone.active-zone .free-zone-controls,
+        #seatingChart.mode-group.groups-per-row-free .free-space-zone:hover .free-zone-controls,
+        #seatingChart.mode-group.groups-per-row-free .free-space-zone.active-zone .free-zone-controls { display: inline-flex; }
+        .free-zone-resize {
+            display: none;
+            position: absolute;
+            right: -5px;
+            bottom: -5px;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            background: #f97316;
+            border: 2px solid white;
+            cursor: nwse-resize;
+            z-index: 86;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+        }
+        #seatingChart.mode-freeform.freeform-edit-mode .free-zone-resize,
+        #seatingChart.mode-group.groups-per-row-free .free-zone-resize { display: block; }
         #seatingChart.mode-freeform.freeform-edit-mode .desk:hover {
             z-index: 60;
             outline: 2px solid #2563eb;
@@ -275,6 +376,76 @@
             z-index: 200;
             border-radius: 4px;
         }
+        /* 自由畫布已綁定分組區域外框（支援 --item-rotate 隨小組同步旋轉） */
+        .free-group-zone {
+            --item-rotate: 0deg;
+            transform: rotate(var(--item-rotate));
+            transform-origin: center center;
+            position: absolute;
+            border: 2px dashed #3b82f6;
+            border-radius: 12px;
+            background-color: rgba(239, 246, 255, 0.55);
+            z-index: 1;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+            pointer-events: none;
+        }
+        .free-group-zone.picker-active {
+            border: 3px solid #ec4899 !important;
+            background-color: rgba(252, 231, 243, 0.72) !important;
+            box-shadow: 0 0 18px rgba(236, 72, 153, 0.55) !important;
+            transform: rotate(var(--item-rotate)) scale(1.03) !important;
+            z-index: 35;
+        }
+        .free-group-zone.picker-winner {
+            border: 3px solid #eab308 !important;
+            background-color: rgba(254, 249, 195, 0.78) !important;
+            box-shadow: 0 0 24px rgba(234, 179, 8, 0.75) !important;
+            transform: rotate(var(--item-rotate)) scale(1.04) !important;
+            z-index: 38;
+        }
+        .free-group-header {
+            position: absolute;
+            top: 4px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            pointer-events: auto;
+            z-index: 5;
+        }
+        .free-group-title-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            border-radius: 999px;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        .free-group-name-text { cursor: pointer; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .free-group-name-input { font-size: 11px; width: 88px; border: 1px solid #3b82f6; border-radius: 3px; padding: 0 3px; outline: none; display: none; }
+        .free-group-name-text.editing { display: none; }
+        .free-group-name-input.editing { display: inline-block; }
+        .free-group-score-pill {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 999px;
+            padding: 1px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #92400e;
+        }
+        .view-style-group-scores .free-group-score-pill { display: inline-flex; }
+        #seatingChart.mode-freeform .desk { z-index: 10; }
         .free-angle-label { font-size: 9px; font-family: monospace; color: #cbd5e1; min-width: 24px; text-align: center; cursor: pointer; }
 
         /* 分組計分板列 */
@@ -353,7 +524,9 @@
         .exporting-mode .group-actions,
         .exporting-mode .front-badge,
         .exporting-mode .group-stats-badge,
-        .exporting-mode .free-desk-controls { display: none !important; }
+        .exporting-mode .free-desk-controls,
+        .exporting-mode .free-zone-controls,
+        .exporting-mode .free-zone-resize { display: none !important; }
         .exporting-mode .desk.is-disabled { visibility: hidden !important; }
 
         /* Toast 通知（避開頂部導覽列不遮擋按鈕） */
@@ -433,6 +606,12 @@
                     <i class="fas fa-folder-open mr-1"></i><span>讀取檔</span>
                     <input type="file" id="loadProjectInput" accept=".json" class="hidden">
                 </label>
+                <button id="resetAllDataBtn" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1.5 rounded text-xs flex items-center shadow transition flex-1 sm:flex-initial justify-center" title="一鍵清除所有歷史紀錄與本機暫存檔">
+                    <i class="fas fa-broom mr-1"></i><span>清除暫存</span>
+                </button>
+                <a href="manual.html" id="manualLinkBtn" class="w-9 h-9 rounded-full bg-blue-500 hover:bg-blue-400 border-2 border-white/85 text-white shadow-md flex items-center justify-center transition shrink-0" title="開啟詳細使用說明書" aria-label="使用說明書">
+                    <i class="fas fa-book text-sm"></i>
+                </a>
             </div>
         </div>
     </header>
@@ -452,7 +631,7 @@
                 <div id="tab-setup" class="tab-panel active p-3.5 sm:p-4 space-y-4">
                     <div>
                         <label class="block text-gray-700 mb-1 font-medium text-xs"><i class="fas fa-tag mr-1 text-blue-500"></i>班級名稱</label>
-                        <input type="text" id="classNameInput" class="w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="例如：八年一班">
+                        <input type="text" id="classNameInput" class="w-full px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="例如：神來一班">
                     </div>
 
                     <div>
@@ -494,12 +673,13 @@
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="text-gray-600 font-medium text-xs">教室每排組數</label>
+                                <label class="text-gray-600 font-medium text-xs">小組畫布 / 排列方式</label>
                                 <select id="groupsPerRowSelect" class="w-full px-2 py-1 border rounded text-xs bg-white">
-                                    <option value="auto">自動換行</option>
-                                    <option value="2">每排 2 組</option>
-                                    <option value="3">每排 3 組</option>
-                                    <option value="4">每排 4 組</option>
+                                    <option value="free" selected>自由畫布擺放（任意拖曳定位）</option>
+                                    <option value="auto">自動換行（固定網格）</option>
+                                    <option value="2">每排 2 組（固定網格）</option>
+                                    <option value="3">每排 3 組（固定網格）</option>
+                                    <option value="4">每排 4 組（固定網格）</option>
                                 </select>
                             </div>
                             <div>
@@ -512,9 +692,20 @@
                                 </select>
                             </div>
                         </div>
-                        <button id="addGroupBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 w-full rounded text-xs font-medium shadow-sm transition"><i class="fas fa-plus-circle mr-1"></i>新增一個小組</button>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button id="autoBalanceByGroupsBtn" type="button" class="bg-sky-600 hover:bg-sky-700 text-white py-1.5 px-2 rounded text-xs font-medium shadow-sm transition" title="依目前設定的「分組數量」，將全班人數平均分配（0 空位、0 落單）"><i class="fas fa-scale-balanced mr-1"></i>依組數均分全員</button>
+                            <button id="autoBalanceBySizeBtn" type="button" class="bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-2 rounded text-xs font-medium shadow-sm transition" title="依目前設定的「每組人數」，自動算出最適組數並均分（不留多餘空位）"><i class="fas fa-users-between-lines mr-1"></i>依每組人數分組</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button id="addGroupBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded text-xs font-medium shadow-sm transition"><i class="fas fa-plus-circle mr-1"></i>新增一個小組</button>
+                            <button id="addGroupSpaceZoneBtn" type="button" class="bg-orange-500 hover:bg-orange-600 text-white py-1.5 rounded text-xs font-medium shadow-sm transition" title="在分組畫布中新增可自由拖曳、縮放與旋轉的走道／空間區"><i class="fas fa-road mr-1"></i>新增空間區/走道</button>
+                        </div>
+                        <div id="groupFreeCanvasBar" class="hidden bg-purple-50 border border-purple-200 rounded p-2 flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold text-purple-800"><i class="fas fa-arrows-up-down-left-right mr-1"></i>分組自由畫布：拖曳組標題列任意定位</span>
+                            <button id="resetGroupCoordsBtn" type="button" class="bg-white hover:bg-purple-100 text-purple-700 border border-purple-300 px-2 py-0.5 rounded text-[11px] font-medium shrink-0 transition" title="將所有小組重新對齊為整齊網格位置"><i class="fas fa-table-cells mr-1"></i>整齊對齊</button>
+                        </div>
                         <p class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2">
-                            <i class="fas fa-lightbulb mr-1"></i>每組標題列皆可改色 <i class="fas fa-palette mx-0.5"></i>、切桌型 <i class="fas fa-table-cells mx-0.5"></i>、轉角度 <i class="fas fa-rotate mx-0.5"></i> 與增減空位 <i class="fas fa-plus mx-0.5"></i>。
+                            <i class="fas fa-lightbulb mr-1"></i>切至「自由畫布擺放」即可按住組標題列任意擺放小組；拖曳學生至他組標題列可直接轉組，標記「組長」後隨機分組會自動分散。
                         </p>
                     </div>
 
@@ -534,6 +725,12 @@
                                 </button>
                                 <button id="addFreeDeskBtn" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-2 rounded text-xs font-medium transition">
                                     <i class="fas fa-plus mr-1"></i>新增一張桌子
+                                </button>
+                                <button id="addFreeZoneBtn" type="button" class="bg-orange-500 hover:bg-orange-600 text-white py-1.5 px-2 rounded text-xs font-medium transition" title="新增可自由移動、縮放與旋轉的走道或空間區">
+                                    <i class="fas fa-road mr-1"></i>新增空間區/走道
+                                </button>
+                                <button id="fitFreeDesksBtn" type="button" class="bg-sky-600 hover:bg-sky-700 text-white py-1.5 px-2 rounded text-xs font-medium transition" title="依目前實際學生人數自動精簡或補足桌子數量">
+                                    <i class="fas fa-user-check mr-1"></i>依人數對齊桌數
                                 </button>
                             </div>
                             <div class="border-t border-purple-200 pt-2 space-y-1.5">
@@ -739,8 +936,9 @@
                     <div class="flex items-center gap-1.5 flex-wrap w-full sm:w-auto justify-end">
                         <button id="randomGroupPickerBtn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded text-xs font-medium shadow-sm transition" title="從分組中隨機抽一組上臺"><i class="fas fa-people-group mr-1"></i>隨機抽組</button>
                         <button id="randomPickerBtn" class="bg-pink-600 hover:bg-pink-700 text-white px-2.5 py-1.5 rounded text-xs font-medium shadow-sm transition" title="從目前座位表隨機點一位同學"><i class="fas fa-dice mr-1"></i>隨機點人</button>
-                        <button id="exportImageBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded text-xs font-medium shadow-sm transition"><i class="fas fa-image mr-1"></i>圖片</button>
-                        <button id="exportLayoutBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded text-xs font-medium shadow-sm transition"><i class="fas fa-file-word mr-1"></i>Word</button>
+                        <button id="exportImageBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded text-xs font-medium shadow-sm transition" title="匯出高畫質 PNG 圖片"><i class="fas fa-image mr-1"></i>PNG</button>
+                        <button id="exportSvgBtn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-2.5 py-1.5 rounded text-xs font-medium shadow-sm transition" title="匯出可無限放大之 SVG 向量圖檔"><i class="fas fa-bezier-curve mr-1"></i>SVG</button>
+                        <button id="exportLayoutBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded text-xs font-medium shadow-sm transition" title="匯出 Word 文件"><i class="fas fa-file-word mr-1"></i>Word</button>
                     </div>
                 </div>
 
@@ -757,9 +955,20 @@
                         <span><i class="fas fa-up-down-left-right mr-1"></i>桌位編排中：可拖曳空白處框選多桌（或 Ctrl+點擊），整群一起移動／旋轉</span>
                         <button id="exitFreeformEditBtn" type="button" class="bg-purple-600 text-white px-2.5 py-0.5 rounded-full text-[11px] hover:bg-purple-700"><i class="fas fa-check mr-0.5"></i>切回安排學生</button>
                     </div>
+                    <div id="groupFreeCanvasBanner" class="hidden no-print mt-1.5 inline-flex flex-wrap items-center justify-center gap-2 bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-1 rounded-full text-xs font-medium">
+                        <span><i class="fas fa-arrows-up-down-left-right mr-1"></i>分組自由畫布：按住任一小組標題列即可拖曳至教室任意位置</span>
+                        <label class="inline-flex items-center cursor-pointer bg-white/80 hover:bg-white border border-emerald-300 px-2 py-0.5 rounded-full text-[11px] text-emerald-800 font-medium">
+                            <input type="checkbox" id="groupSnapToGridCheckbox" checked class="rounded text-emerald-600 mr-1">
+                            <i class="fas fa-magnet mr-0.5"></i>對齊格線
+                        </label>
+                        <button id="bannerAddGroupZoneBtn" type="button" class="bg-orange-500 hover:bg-orange-600 text-white px-2.5 py-0.5 rounded-full text-[11px] font-medium"><i class="fas fa-road mr-0.5"></i>新增走道</button>
+                        <button id="bannerResetGroupCoordsBtn" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-0.5 rounded-full text-[11px] font-medium"><i class="fas fa-table-cells mr-0.5"></i>整齊對齊</button>
+                    </div>
                     <!-- 自由畫布群組選取批次工具列 -->
                     <div id="freeformBatchBar" class="hidden no-print mt-1.5 flex flex-wrap items-center justify-center gap-1.5 bg-blue-50 text-blue-900 border border-blue-200 px-3 py-1.5 rounded-lg text-xs shadow-sm">
                         <span class="font-bold text-blue-700 mr-1"><i class="fas fa-object-group mr-1"></i>已選 <span id="selectedFreeCount">0</span> 桌</span>
+                        <button id="batchBindGroupBtn" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded text-[11px] font-medium" title="將所選桌子綁定為一個畫布小組，享有計分板、抽組與分組排位功能"><i class="fas fa-object-group mr-0.5"></i>綁定為小組</button>
+                        <button id="batchUnbindGroupBtn" type="button" class="bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 px-2 py-0.5 rounded text-[11px]" title="解除所選桌子的分組綁定"><i class="fas fa-object-ungroup mr-0.5"></i>解除分組</button>
                         <button id="batchOrbitLeftBtn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded text-[11px]" title="整群繞群組中心向左公轉 15 度"><i class="fas fa-rotate-left mr-0.5"></i>整群左轉</button>
                         <button id="batchOrbitRightBtn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded text-[11px]" title="整群繞群組中心向右公轉 15 度"><i class="fas fa-rotate-right mr-0.5"></i>整群右轉</button>
                         <button id="batchSelfLeftBtn" type="button" class="bg-white hover:bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded text-[11px]" title="各桌原地向左自轉 15 度"><i class="fas fa-undo mr-0.5"></i>各桌-15°</button>
@@ -789,10 +998,12 @@
                         <div id="teacherDeskObject" class="classroom-object teacher-desk-object hidden shadow-md"><i class="fas fa-person-chalkboard mr-1.5"></i> 講桌</div>
                     </div>
 
-                    <div id="seatingChartWrapper" class="flex-grow overflow-auto p-1 flex items-stretch gap-1">
-                        <div id="leftMarkerCol" class="side-marker-col hidden"></div>
-                        <div id="seatingChart" class="min-h-[260px] rounded bg-white shadow-sm pb-6 transition-all flex-grow mx-auto"></div>
-                        <div id="rightMarkerCol" class="side-marker-col hidden"></div>
+                    <div id="seatingChartWrapper" class="flex-grow overflow-auto p-1">
+                        <div id="seatingChartInnerFrame">
+                            <div id="leftMarkerCol" class="side-marker-col hidden"></div>
+                            <div id="seatingChart" class="min-h-[260px] rounded bg-white shadow-sm pb-6 transition-all flex-grow"></div>
+                            <div id="rightMarkerCol" class="side-marker-col hidden"></div>
+                        </div>
                     </div>
 
                     <div id="teacherDeskContainerBottom" class="mt-1.5 flex items-center justify-center shrink-0"></div>
@@ -935,6 +1146,8 @@
                 this.sortableInstances = [];
                 this.nextGroupId = 0;
                 this.nextFreeDeskId = 0;
+                this.nextFreeGroupId = 0;
+                this.nextFreeZoneId = 0;
                 this.xlsx = typeof XLSX !== 'undefined' ? XLSX : null;
                 this.audioCtx = null;
 
@@ -979,10 +1192,12 @@
                     mustGroupPairs: [], // Array<[studentIdA, studentIdB]>
                     waitingBench: [],
                     groups: [], // Array<{ id, name, seatCount, cols, colorIdx, score, angle }>
-                    freeDesks: [], // Array<{ id, x, y, angle }>
+                    freeDesks: [], // Array<{ id, x, y, angle, groupId? }>
+                    freeGroups: [], // Array<{ id, name, colorIdx, score, angle }>
+                    freeZones: [], // Array<{ id, x, y, w, h, label, angle }>
                     snapToGrid: true,
                     seatingMode: 'traditional',
-                    groupsPerRow: 'auto', // 'auto' | '2' | '3' | '4'
+                    groupsPerRow: 'free', // 'free' | 'auto' | '2' | '3' | '4'
                     defaultGroupCols: '2', // '2' | '3' | '1' | 'row'
                     viewPerspective: 'teacher',
                     showBlackboard: true,
@@ -1002,7 +1217,7 @@
                     showMascot: true,
                     includeBenchInShuffle: false,
                     zoomScale: 100,
-                    className: '預設班級',
+                    className: '神來一班',
                     rows: 4,
                     cols: 6,
                     numGroups: 5,
@@ -1102,6 +1317,7 @@
                     toggleSidebarBtn: document.getElementById('toggleSidebarBtn'),
                     saveProjectBtn: document.getElementById('saveProjectBtn'),
                     loadProjectInput: document.getElementById('loadProjectInput'),
+                    resetAllDataBtn: document.getElementById('resetAllDataBtn'),
                     undoBtn: document.getElementById('undoBtn'),
                     redoBtn: document.getElementById('redoBtn'),
 
@@ -1116,11 +1332,14 @@
                     groupInputsDiv: document.getElementById('groupInputs'),
                     freeformInputsDiv: document.getElementById('freeformInputs'),
                     snapToGridCheckbox: document.getElementById('snapToGridCheckbox'),
+                    groupSnapToGridCheckbox: document.getElementById('groupSnapToGridCheckbox'),
                     toggleFreeformEditBtn: document.getElementById('toggleFreeformEditBtn'),
                     exitFreeformEditBtn: document.getElementById('exitFreeformEditBtn'),
                     freeformModeBanner: document.getElementById('freeformModeBanner'),
                     freeformBatchBar: document.getElementById('freeformBatchBar'),
                     selectedFreeCount: document.getElementById('selectedFreeCount'),
+                    batchBindGroupBtn: document.getElementById('batchBindGroupBtn'),
+                    batchUnbindGroupBtn: document.getElementById('batchUnbindGroupBtn'),
                     batchOrbitLeftBtn: document.getElementById('batchOrbitLeftBtn'),
                     batchOrbitRightBtn: document.getElementById('batchOrbitRightBtn'),
                     batchSelfLeftBtn: document.getElementById('batchSelfLeftBtn'),
@@ -1130,6 +1349,8 @@
                     batchResetAngleBtn: document.getElementById('batchResetAngleBtn'),
                     clearFreeSelectionBtn: document.getElementById('clearFreeSelectionBtn'),
                     addFreeDeskBtn: document.getElementById('addFreeDeskBtn'),
+                    addFreeZoneBtn: document.getElementById('addFreeZoneBtn'),
+                    fitFreeDesksBtn: document.getElementById('fitFreeDesksBtn'),
                     resetAllAnglesBtn: document.getElementById('resetAllAnglesBtn'),
                     presetUShapeBtn: document.getElementById('presetUShapeBtn'),
                     presetDoubleUBtn: document.getElementById('presetDoubleUBtn'),
@@ -1140,6 +1361,14 @@
                     presetDiamondBtn: document.getElementById('presetDiamondBtn'),
                     presetGridFreeBtn: document.getElementById('presetGridFreeBtn'),
                     addGroupBtn: document.getElementById('addGroupBtn'),
+                    autoBalanceByGroupsBtn: document.getElementById('autoBalanceByGroupsBtn'),
+                    autoBalanceBySizeBtn: document.getElementById('autoBalanceBySizeBtn'),
+                    addGroupSpaceZoneBtn: document.getElementById('addGroupSpaceZoneBtn'),
+                    groupFreeCanvasBar: document.getElementById('groupFreeCanvasBar'),
+                    resetGroupCoordsBtn: document.getElementById('resetGroupCoordsBtn'),
+                    groupFreeCanvasBanner: document.getElementById('groupFreeCanvasBanner'),
+                    bannerAddGroupZoneBtn: document.getElementById('bannerAddGroupZoneBtn'),
+                    bannerResetGroupCoordsBtn: document.getElementById('bannerResetGroupCoordsBtn'),
                     toggleDisableModeBtn: document.getElementById('toggleDisableModeBtn'),
                     quickAisleBtn: document.getElementById('quickAisleBtn'),
                     clearDisabledBtn: document.getElementById('clearDisabledBtn'),
@@ -1199,6 +1428,7 @@
                     randomGroupPickerBtn: document.getElementById('randomGroupPickerBtn'),
                     randomPickerBtn: document.getElementById('randomPickerBtn'),
                     exportImageBtn: document.getElementById('exportImageBtn'),
+                    exportSvgBtn: document.getElementById('exportSvgBtn'),
                     exportLayoutBtn: document.getElementById('exportLayoutBtn'),
 
                     printClassName: document.getElementById('printClassName'),
@@ -1269,6 +1499,7 @@
 
                 this.elements.saveProjectBtn.addEventListener('click', () => this.saveProjectToFile());
                 this.elements.loadProjectInput.addEventListener('change', (e) => this.loadProjectFromFile(e));
+                this.elements.resetAllDataBtn.addEventListener('click', () => this.clearAllHistoryAndCache());
                 this.elements.undoBtn.addEventListener('click', () => this.undo());
                 this.elements.redoBtn.addEventListener('click', () => this.redo());
 
@@ -1284,9 +1515,14 @@
                     this.showToast('已清除全部走道／禁用格', 'info');
                 });
 
-                // 分組客製化：每排組數與全域每組桌型
+                // 分組客製化：每排組數（含自由畫布定位模式）與全域每組桌型
                 this.elements.groupsPerRowSelect.addEventListener('change', () => {
                     this.state.groupsPerRow = this.elements.groupsPerRowSelect.value;
+                    if (this.state.groupsPerRow === 'free') {
+                        this.ensureGroupFreeCoords();
+                        this.showToast('已啟用分組自由畫布：按住任一小組標題列即可自由拖曳擺放位置！', 'info', 2600);
+                    }
+                    this.updateConditionalInputs();
                     this.renderSeatingChart();
                     this.commitState(true);
                 });
@@ -1300,14 +1536,22 @@
                     this.showToast('已將全部小組套用新桌型', 'success', 1600);
                 });
 
-                // 自由畫布控制
-                this.elements.snapToGridCheckbox.addEventListener('change', () => {
-                    this.state.snapToGrid = this.elements.snapToGridCheckbox.checked;
+                // 自由畫布與分組自由畫布：對齊格線雙向同步
+                const syncSnapToGrid = (checked) => {
+                    this.state.snapToGrid = checked;
+                    this.elements.snapToGridCheckbox.checked = checked;
+                    if (this.elements.groupSnapToGridCheckbox) this.elements.groupSnapToGridCheckbox.checked = checked;
                     this.saveToLocalStorage();
-                });
+                };
+                this.elements.snapToGridCheckbox.addEventListener('change', () => syncSnapToGrid(this.elements.snapToGridCheckbox.checked));
+                if (this.elements.groupSnapToGridCheckbox) {
+                    this.elements.groupSnapToGridCheckbox.addEventListener('change', () => syncSnapToGrid(this.elements.groupSnapToGridCheckbox.checked));
+                }
                 this.elements.toggleFreeformEditBtn.addEventListener('click', () => this.toggleFreeformEditMode());
                 this.elements.exitFreeformEditBtn.addEventListener('click', () => this.toggleFreeformEditMode(false));
                 this.elements.addFreeDeskBtn.addEventListener('click', () => this.addFreeDesk());
+                this.elements.addFreeZoneBtn.addEventListener('click', () => this.addFreeSpaceZone());
+                this.elements.fitFreeDesksBtn.addEventListener('click', () => this.fitFreeDesksToStudents());
                 this.elements.resetAllAnglesBtn.addEventListener('click', () => {
                     this.state.freeDesks.forEach(d => { d.angle = 0; });
                     this.renderSeatingChart();
@@ -1324,6 +1568,8 @@
                 this.elements.presetGridFreeBtn.addEventListener('click', () => this.applyFreeformPreset('grid'));
 
                 // 自由畫布群組批次操作
+                this.elements.batchBindGroupBtn.addEventListener('click', () => this.bindSelectedFreeDesksToGroup());
+                this.elements.batchUnbindGroupBtn.addEventListener('click', () => this.unbindSelectedFreeDesksFromGroup());
                 this.elements.batchOrbitLeftBtn.addEventListener('click', () => this.batchRotateSelectedFreeDesks(-15, true));
                 this.elements.batchOrbitRightBtn.addEventListener('click', () => this.batchRotateSelectedFreeDesks(15, true));
                 this.elements.batchSelfLeftBtn.addEventListener('click', () => this.batchRotateSelectedFreeDesks(-15, false));
@@ -1448,6 +1694,7 @@
                 this.elements.resetAllScoresBtn.addEventListener('click', () => {
                     if (confirm('確定要將所有小組分數歸零嗎？')) {
                         this.state.groups.forEach(g => { g.score = 0; });
+                        this.state.freeGroups.forEach(g => { g.score = 0; });
                         this.renderSeatingChart();
                         this.commitState(true);
                         this.showToast('全部小組分數已歸零', 'info', 1500);
@@ -1459,6 +1706,20 @@
                 });
                 this.elements.studentsTextarea.addEventListener('change', () => this.saveToLocalStorage());
                 this.elements.addGroupBtn.addEventListener('click', () => { this.addNewGroup(); this.commitState(true); });
+                this.elements.autoBalanceByGroupsBtn.addEventListener('click', () => this.autoBalanceGroups('byGroups'));
+                this.elements.autoBalanceBySizeBtn.addEventListener('click', () => this.autoBalanceGroups('bySize'));
+                if (this.elements.addGroupSpaceZoneBtn) {
+                    this.elements.addGroupSpaceZoneBtn.addEventListener('click', () => this.addFreeSpaceZone());
+                }
+                if (this.elements.resetGroupCoordsBtn) {
+                    this.elements.resetGroupCoordsBtn.addEventListener('click', () => this.autoArrangeGroupCoords());
+                }
+                if (this.elements.bannerAddGroupZoneBtn) {
+                    this.elements.bannerAddGroupZoneBtn.addEventListener('click', () => this.addFreeSpaceZone());
+                }
+                if (this.elements.bannerResetGroupCoordsBtn) {
+                    this.elements.bannerResetGroupCoordsBtn.addEventListener('click', () => this.autoArrangeGroupCoords());
+                }
 
                 document.querySelectorAll('input[name="seatingMode"]').forEach(radio => {
                     radio.addEventListener('change', (e) => {
@@ -1499,6 +1760,7 @@
                 this.elements.randomPickerBtn.addEventListener('click', () => this.runRandomPicker());
                 this.elements.randomGroupPickerBtn.addEventListener('click', () => this.runRandomGroupPicker());
                 this.elements.exportImageBtn.addEventListener('click', () => this.exportLayoutImage());
+                this.elements.exportSvgBtn.addEventListener('click', () => this.exportLayoutSvg());
                 this.elements.exportLayoutBtn.addEventListener('click', () => this.exportSeatingLayout());
 
                 // 座位表點擊與雙擊編輯
@@ -1569,7 +1831,7 @@
                     if (rawLegacy) {
                         const legacyData = JSON.parse(rawLegacy);
                         const firstId = `cls_${Date.now()}`;
-                        const label = (legacyData.state && legacyData.state.className) || '預設班級';
+                        const label = (legacyData.state && legacyData.state.className) || '神來一班';
                         this.classStore = { activeClassId: firstId, classes: { [firstId]: { id: firstId, label, data: legacyData } } };
                         this.renderClassSwitcher();
                         this.restoreState(legacyData, false);
@@ -1594,7 +1856,7 @@
                 Object.values(this.classStore.classes).forEach(cls => {
                     const opt = document.createElement('option');
                     opt.value = cls.id;
-                    opt.textContent = cls.label || '未命名班級';
+                    opt.textContent = cls.label || '神來一班';
                     if (cls.id === this.classStore.activeClassId) opt.selected = true;
                     select.appendChild(opt);
                 });
@@ -1603,10 +1865,68 @@
             updateClassSwitcherLabel() {
                 const active = this.classStore.classes[this.classStore.activeClassId];
                 if (active) {
-                    active.label = this.state.className || '未命名班級';
+                    active.label = this.state.className || '神來一班';
                     const opt = this.elements.classSwitcherSelect.querySelector(`option[value="${active.id}"]`);
                     if (opt) opt.textContent = active.label;
                 }
+            }
+
+            // 一鍵清除所有歷史紀錄與本機暫存檔，重置為乾淨的「神來一班」
+            clearAllHistoryAndCache() {
+                if (!confirm('確定要一鍵清除所有歷史紀錄、本機暫存檔與全部班級資料嗎？\n（此動作無法復原，建議先匯出儲存專案檔）')) {
+                    return;
+                }
+                try {
+                    localStorage.removeItem(this.MULTI_STORAGE_KEY);
+                    localStorage.removeItem(this.LEGACY_STORAGE_KEY);
+                } catch (err) {
+                    console.warn('清除 LocalStorage 失敗:', err);
+                }
+
+                this.historyStack = [];
+                this.historyIndex = -1;
+                this.pickedStudentIds.clear();
+                this.pickedGroupIds.clear();
+                this.selectedFreeDeskIds.clear();
+                this.isEditingDisabled = false;
+                this.isFreeformEditMode = false;
+                this.searchQuery = '';
+                this.nextGroupId = 0;
+                this.nextFreeDeskId = 0;
+                this.nextFreeGroupId = 0;
+                this.nextFreeZoneId = 0;
+
+                this.elements.studentsTextarea.value = '';
+                this.elements.searchStudentInput.value = '';
+                this.elements.clearSearchBtn.classList.add('hidden');
+                this.elements.classroomLayout.classList.remove('editing-disabled-mode');
+                this.elements.disableModeBanner.classList.add('hidden');
+                this.elements.freeformModeBanner.classList.add('hidden');
+                this.elements.freeformBatchBar.classList.add('hidden');
+
+                const firstId = `cls_${Date.now()}`;
+                this.state = this.createDefaultState();
+                this.classStore = {
+                    activeClassId: firstId,
+                    classes: { [firstId]: { id: firstId, label: this.state.className, data: null } }
+                };
+
+                const tradRadio = document.querySelector('input[name="seatingMode"][value="traditional"]');
+                if (tradRadio) tradRadio.checked = true;
+                const swapRadio = document.querySelector('input[name="dragMode"][value="swap"]');
+                if (swapRadio) swapRadio.checked = true;
+
+                this.elements.rowsInput.value = this.state.rows;
+                this.elements.colsInput.value = this.state.cols;
+                this.elements.numGroupsInput.value = this.state.numGroups;
+                this.elements.studentsPerGroupInput.value = this.state.studentsPerGroup;
+
+                this.initializeDefault();
+                this.saveToLocalStorage();
+                this.saveStateToHistory();
+                this.renderClassSwitcher();
+                this.updateUndoRedoButtons();
+                this.showToast('已清除全部歷史紀錄與暫存檔，重置為「神來一班」', 'success');
             }
 
             switchClass(classId) {
@@ -1705,13 +2025,235 @@
                     if (m) maxId = Math.max(maxId, parseInt(m[1], 10));
                 });
                 this.nextFreeDeskId = Math.max(this.nextFreeDeskId, maxId + 1);
+                this.syncNextFreeGroupId();
+            }
+
+            syncNextFreeGroupId() {
+                let maxFg = -1;
+                (this.state.freeGroups || []).forEach(g => {
+                    const m = /^fg(\d+)$/.exec(g.id);
+                    if (m) maxFg = Math.max(maxFg, parseInt(m[1], 10));
+                });
+                this.nextFreeGroupId = Math.max(this.nextFreeGroupId, maxFg + 1);
+                let maxFz = -1;
+                (this.state.freeZones || []).forEach(z => {
+                    const m = /^fz(\d+)$/.exec(z.id);
+                    if (m) maxFz = Math.max(maxFz, parseInt(m[1], 10));
+                });
+                this.nextFreeZoneId = Math.max(this.nextFreeZoneId, maxFz + 1);
+            }
+
+            getActiveStudentCount() {
+                return Math.max(
+                    this.state.students.length,
+                    this.state.layoutMap.size + this.state.waitingBench.length
+                );
+            }
+
+            addFreeSpaceZone() {
+                if (this.state.seatingMode === 'group') {
+                    if (this.state.groupsPerRow !== 'free') {
+                        this.state.groupsPerRow = 'free';
+                        this.elements.groupsPerRowSelect.value = 'free';
+                        this.ensureGroupFreeCoords();
+                        this.updateConditionalInputs();
+                    }
+                } else if (this.state.seatingMode === 'freeform') {
+                    if (!this.isFreeformEditMode) this.toggleFreeformEditMode(true);
+                } else {
+                    return;
+                }
+                if (!Array.isArray(this.state.freeZones)) this.state.freeZones = [];
+                this.syncNextFreeGroupId();
+                const id = `fz${this.nextFreeZoneId++}`;
+                const offset = (this.state.freeZones.length % 5) * 24;
+                this.state.freeZones.push({
+                    id,
+                    x: 80 + offset,
+                    y: 80 + offset,
+                    w: 140,
+                    h: 84,
+                    label: '走道 / 空間區',
+                    angle: 0
+                });
+                this.renderSeatingChart();
+                this.commitState(true);
+                this.showToast('已新增空間區，可拖曳移動、調整大小、旋轉、點擊改名或刪除', 'success', 2200);
+            }
+
+            fitFreeDesksToStudents() {
+                if (this.state.seatingMode !== 'freeform') return;
+                const activeCount = this.getActiveStudentCount();
+                if (activeCount === 0) {
+                    this.showToast('目前名單內沒有學生，請先輸入學生名單', 'info');
+                    return;
+                }
+                const currentCount = this.state.freeDesks.length;
+                if (currentCount === activeCount) {
+                    this.showToast(`目前桌數已與 ${activeCount} 位學生人數完全一致`, 'info', 1600);
+                    return;
+                }
+                if (currentCount > activeCount) {
+                    // 優先移除空桌，直到桌數等於學生數
+                    let toRemove = currentCount - activeCount;
+                    for (let i = this.state.freeDesks.length - 1; i >= 0 && toRemove > 0; i--) {
+                        const d = this.state.freeDesks[i];
+                        if (!this.state.layoutMap.has(d.id)) {
+                            this.state.lockedDeskIds.delete(d.id);
+                            this.state.freeDesks.splice(i, 1);
+                            toRemove--;
+                        }
+                    }
+                    this.cleanupEmptyFreeGroups();
+                } else {
+                    // 補足缺少的桌數並把暫存區學生放上去
+                    let toAdd = activeCount - currentCount;
+                    while (toAdd > 0) {
+                        const id = `f${this.nextFreeDeskId++}`;
+                        const idx = this.state.freeDesks.length;
+                        this.state.freeDesks.push({ id, x: 56 + (idx % 6) * 124, y: 64 + Math.floor(idx / 6) * 106, angle: 0 });
+                        if (this.state.waitingBench.length > 0) {
+                            this.state.layoutMap.set(id, this.state.waitingBench.shift());
+                        }
+                        toAdd--;
+                    }
+                }
+                this.updateConditionalInputs();
+                this.renderSeatingChart();
+                this.renderWaitingBench();
+                this.commitState(true);
+                this.showToast(`已依實際人數調整為 ${this.state.freeDesks.length} 張桌子`, 'success', 1800);
+            }
+
+            cleanupEmptyFreeGroups() {
+                const usedIds = new Set(this.state.freeDesks.map(d => d.groupId).filter(Boolean));
+                this.state.freeGroups = (this.state.freeGroups || []).filter(g => usedIds.has(g.id));
+            }
+
+            getFreeGroupMembers(fg) {
+                const members = [];
+                this.state.freeDesks.forEach(d => {
+                    if (d.groupId === fg.id && this.state.layoutMap.has(d.id)) {
+                        members.push(this.state.layoutMap.get(d.id));
+                    }
+                });
+                return members;
+            }
+
+            bindSelectedFreeDesksToGroup() {
+                if (this.selectedFreeDeskIds.size === 0) return;
+                const selectedDesks = this.state.freeDesks.filter(d => this.selectedFreeDeskIds.has(d.id));
+                if (selectedDesks.length === 0) return;
+
+                this.syncNextFreeGroupId();
+                const fgId = `fg${this.nextFreeGroupId++}`;
+                const nextNum = (this.state.freeGroups ? this.state.freeGroups.length : 0) + 1;
+                const defaultName = `第 ${nextNum} 組`;
+                // 自動計算所選桌子的初始角度（讓原本已傾斜的桌群綁定時外框立即對齊角度）
+                const avgAngle = Math.round(selectedDesks.reduce((s, d) => s + (d.angle || 0), 0) / selectedDesks.length);
+                const newGroup = {
+                    id: fgId,
+                    name: defaultName,
+                    colorIdx: (nextNum - 1) % this.GROUP_COLORS.length,
+                    score: 0,
+                    angle: avgAngle
+                };
+                if (!Array.isArray(this.state.freeGroups)) this.state.freeGroups = [];
+                this.state.freeGroups.push(newGroup);
+                selectedDesks.forEach(d => { d.groupId = fgId; });
+                this.cleanupEmptyFreeGroups();
+
+                this.updateConditionalInputs();
+                this.renderSeatingChart();
+                this.commitState(true);
+                this.showToast(`已將 ${selectedDesks.length} 張桌子綁定為「${defaultName}」，可使用抽組、計分與分組排位！`, 'success');
+            }
+
+            unbindSelectedFreeDesksFromGroup() {
+                if (this.selectedFreeDeskIds.size === 0) return;
+                let changed = false;
+                this.state.freeDesks.forEach(d => {
+                    if (this.selectedFreeDeskIds.has(d.id) && d.groupId) {
+                        delete d.groupId;
+                        changed = true;
+                    }
+                });
+                if (!changed) {
+                    this.showToast('所選桌子目前未綁定任何分組', 'info', 1500);
+                    return;
+                }
+                this.cleanupEmptyFreeGroups();
+                this.updateConditionalInputs();
+                this.renderSeatingChart();
+                this.commitState(true);
+                this.showToast('已解除所選桌子的分組綁定', 'info', 1600);
+            }
+
+            selectFreeGroupDesks(fgId) {
+                if (!this.isFreeformEditMode) this.toggleFreeformEditMode(true);
+                this.selectedFreeDeskIds.clear();
+                this.state.freeDesks.forEach(d => {
+                    if (d.groupId === fgId) this.selectedFreeDeskIds.add(d.id);
+                });
+                this.updateFreeformBatchBar();
+            }
+
+            // 以畫布小組中心為軸心，直接整組公轉旋轉（無需先手動框選）
+            rotateFreeGroup(fgId, deltaDeg) {
+                const groupDesks = this.state.freeDesks.filter(d => d.groupId === fgId);
+                if (groupDesks.length === 0) return;
+
+                const normalizeAngle = (a) => {
+                    let next = a % 360;
+                    if (next > 180) next -= 360;
+                    if (next <= -180) next += 360;
+                    return Math.round(next);
+                };
+
+                if (groupDesks.length === 1) {
+                    groupDesks[0].angle = normalizeAngle((groupDesks[0].angle || 0) + deltaDeg);
+                } else {
+                    const cx = groupDesks.reduce((sum, d) => sum + d.x, 0) / groupDesks.length;
+                    const cy = groupDesks.reduce((sum, d) => sum + d.y, 0) / groupDesks.length;
+                    const rad = (deltaDeg * Math.PI) / 180;
+                    const cos = Math.cos(rad), sin = Math.sin(rad);
+
+                    const nextCoords = groupDesks.map(d => {
+                        const rx = d.x - cx;
+                        const ry = d.y - cy;
+                        return {
+                            d,
+                            nx: Math.round(cx + rx * cos - ry * sin),
+                            ny: Math.round(cy + rx * sin + ry * cos)
+                        };
+                    });
+                    const minX = Math.min(...nextCoords.map(o => o.nx));
+                    const minY = Math.min(...nextCoords.map(o => o.ny));
+                    const shiftX = minX < 20 ? (20 - minX) : 0;
+                    const shiftY = minY < 38 ? (38 - minY) : 0;
+
+                    nextCoords.forEach(({ d, nx, ny }) => {
+                        d.x = nx + shiftX;
+                        d.y = ny + shiftY;
+                        d.angle = normalizeAngle((d.angle || 0) + deltaDeg);
+                    });
+                }
+
+                const fg = (this.state.freeGroups || []).find(g => g.id === fgId);
+                if (fg) fg.angle = normalizeAngle((fg.angle || 0) + deltaDeg);
+
+                this.renderSeatingChart();
+                this.commitState(true);
             }
 
             ensureFreeDesksInitialized() {
                 if (!Array.isArray(this.state.freeDesks) || this.state.freeDesks.length === 0) {
-                    const targetCount = Math.max(16, Math.min(36, this.state.students.length || (this.state.rows * this.state.cols) || 20));
+                    const activeCount = this.getActiveStudentCount();
+                    // 有實際學生時精準依人數建桌，避免塞滿多餘空桌；無人時預設 6 張預覽
+                    const targetCount = activeCount > 0 ? Math.min(60, activeCount) : 6;
                     this.state.freeDesks = this.generateFreeformPresetCoords('grid', targetCount);
                 }
+                if (!Array.isArray(this.state.freeZones)) this.state.freeZones = [];
                 this.syncNextFreeDeskId();
             }
 
@@ -1759,8 +2301,12 @@
                 chart.addEventListener('pointerdown', (e) => {
                     if (this.state.seatingMode !== 'freeform' || !this.isFreeformEditMode) return;
                     if (e.pointerType === 'touch') return; // 手機觸控保留畫布滑動捲動
-                    if (e.target.closest('.desk, .free-desk-controls')) return;
+                    if (e.target.closest('.desk, .free-desk-controls, .free-group-header, .free-space-zone, button, input')) return;
                     if (e.button !== 0) return;
+
+                    // 阻止瀏覽器預設反白選字干擾，確保第一次框選立即流暢生效
+                    e.preventDefault();
+                    if (window.getSelection) { try { window.getSelection().removeAllRanges(); } catch (_) {} }
 
                     marqueeActive = true;
                     didDrag = false;
@@ -1787,8 +2333,9 @@
                     if (!didDrag) return;
                     e.preventDefault();
 
-                    const currChartX = e.clientX - chartRect.left + chart.scrollLeft;
-                    const currChartY = e.clientY - chartRect.top + chart.scrollTop;
+                    const liveRect = chart.getBoundingClientRect();
+                    const currChartX = e.clientX - liveRect.left + chart.scrollLeft;
+                    const currChartY = e.clientY - liveRect.top + chart.scrollTop;
                     const left = Math.min(startChartX, currChartX);
                     const top = Math.min(startChartY, currChartY);
                     const width = Math.abs(currChartX - startChartX);
@@ -1867,7 +2414,17 @@
                         d.y = ny + shiftY;
                         d.angle = normalizeAngle((d.angle || 0) + deltaOrReset);
                     });
+
+                    // 若整組畫布分組全在選取中，同步更新該分組外框角度
+                    const selSet = this.selectedFreeDeskIds;
+                    (this.state.freeGroups || []).forEach(fg => {
+                        const fgDesks = this.state.freeDesks.filter(d => d.groupId === fg.id);
+                        if (fgDesks.length > 0 && fgDesks.every(d => selSet.has(d.id))) {
+                            fg.angle = normalizeAngle((fg.angle || 0) + deltaOrReset);
+                        }
+                    });
                 }
+
 
                 this.renderSeatingChart();
                 this.commitState(true);
@@ -1917,6 +2474,8 @@
                 }
                 this.state.lockedDeskIds.delete(deskId);
                 this.state.freeDesks.splice(idx, 1);
+                this.cleanupEmptyFreeGroups();
+                this.updateConditionalInputs();
                 this.renderSeatingChart();
                 this.renderWaitingBench();
                 this.commitState(true);
@@ -1933,13 +2492,14 @@
                     if (next <= -180) next += 360;
                     desk.angle = next;
                 }
+
                 this.renderSeatingChart();
                 this.commitState(true);
             }
 
             generateFreeformPresetCoords(type, count) {
                 const desks = [];
-                const n = Math.max(6, Math.min(48, count));
+                const n = Math.max(1, Math.min(60, count));
 
                 // 統一座標平移至安全留白區（不暴力裁切，徹底避免邊界擠壓重疊）
                 const normalizeCoords = (list, padX = 44, padY = 40) => {
@@ -1958,28 +2518,29 @@
 
                 if (type === 'ushape') {
                     // U 字馬蹄形：左右兩翼朝內（+90° / -90°），底排朝前（0°）
-                    const bottomCount = Math.max(2, Math.round(n * 0.34));
-                    const sideTotal = n - bottomCount;
-                    const leftCount = Math.ceil(sideTotal / 2);
-                    const rightCount = sideTotal - leftCount;
-                    const maxSide = Math.max(leftCount, rightCount);
-                    const innerWidth = Math.max(360, bottomCount * 124 + 40);
-                    const stepY = 122;
-                    const bottomY = maxSide * stepY + 24;
+                    if (n <= 3) {
+                        for (let i = 0; i < n; i++) desks.push({ x: i * 124, y: 0, angle: 0 });
+                    } else {
+                        const bottomCount = Math.max(1, Math.round(n * 0.34));
+                        const sideTotal = n - bottomCount;
+                        const leftCount = Math.ceil(sideTotal / 2);
+                        const rightCount = sideTotal - leftCount;
+                        const maxSide = Math.max(leftCount, rightCount);
+                        const innerWidth = Math.max(280, bottomCount * 124 + 40);
+                        const stepY = 122;
+                        const bottomY = maxSide * stepY + 24;
 
-                    for (let i = 0; i < leftCount; i++) {
-                        desks.push({ x: 0, y: i * stepY, angle: 90 });
-                    }
-                    const bottomStartX = 140 + Math.round((innerWidth - bottomCount * 124) / 2);
-                    for (let i = 0; i < bottomCount; i++) {
-                        desks.push({ x: bottomStartX + i * 124, y: bottomY, angle: 0 });
-                    }
-                    for (let i = 0; i < rightCount; i++) {
-                        desks.push({ x: 140 + innerWidth + 32, y: i * stepY, angle: -90 });
+                        for (let i = 0; i < leftCount; i++) desks.push({ x: 0, y: i * stepY, angle: 90 });
+                        const bottomStartX = 140 + Math.round((innerWidth - bottomCount * 124) / 2);
+                        for (let i = 0; i < bottomCount; i++) desks.push({ x: bottomStartX + i * 124, y: bottomY, angle: 0 });
+                        for (let i = 0; i < rightCount; i++) desks.push({ x: 140 + innerWidth + 32, y: i * stepY, angle: -90 });
                     }
                 } else if (type === 'doubleU') {
-                    // 雙層大 U 陣：內圈小 U + 外圈大 U（大班討論課最佳陣型）
-                    const innerN = Math.max(5, Math.floor(n * 0.42));
+                    // 雙層大 U 陣：內圈小 U + 外圈大 U（人數 < 8 時退為單 U）
+                    if (n < 8) {
+                        return this.generateFreeformPresetCoords('ushape', n);
+                    }
+                    const innerN = Math.max(3, Math.floor(n * 0.42));
                     const outerN = n - innerN;
 
                     const buildU = (cnt, offsetX, offsetY, innerW, stepY) => {
@@ -2135,7 +2696,7 @@
                         desks.push({ x: c * 124, y: r * 106, angle: 0 });
                     }
                 }
-                return normalizeCoords(desks, 44, 40);
+                return normalizeCoords(desks, 56, 64);
             }
 
             applyFreeformPreset(type) {
@@ -2144,15 +2705,23 @@
                 this.state.freeDesks.forEach(d => {
                     if (this.state.layoutMap.has(d.id)) currentStudents.push(this.state.layoutMap.get(d.id));
                 });
-                const count = Math.max(12, this.state.freeDesks.length || this.state.students.length || 18);
+                // 若有暫存區學生且總學生數 > 目前在桌人數，一併納入統計
+                const activeCount = this.getActiveStudentCount();
+                // 以實際存在的學生人數為主，不多塞一堆空桌；完全無學生時才用目前桌數或預設 6 張
+                const count = activeCount > 0 ? Math.min(60, activeCount) : Math.max(6, this.state.freeDesks.length || 6);
                 const newDesks = this.generateFreeformPresetCoords(type, count);
                 this.state.freeDesks = newDesks;
+                this.state.freeGroups = [];
                 this.syncNextFreeDeskId();
+                this.updateConditionalInputs();
 
+                // 將現有在桌與暫存區學生依序放進新陣型
+                const allToPlace = [...currentStudents, ...this.state.waitingBench];
+                this.state.waitingBench = [];
                 this.state.layoutMap.clear();
                 this.state.lockedDeskIds.clear();
                 this.selectedFreeDeskIds.clear();
-                currentStudents.forEach((student, idx) => {
+                allToPlace.forEach((student, idx) => {
                     if (idx < newDesks.length) this.state.layoutMap.set(newDesks[idx].id, student);
                     else this.state.waitingBench.push(student);
                 });
@@ -2178,17 +2747,26 @@
                 chart.style.gridTemplateColumns = '';
                 this.ensureFreeDesksInitialized();
 
-                // 動態計算畫布所需最小寬高
-                let maxX = 760, maxY = 520;
+                // 動態計算畫布緊貼範圍（同時納入桌子與空間區），讓自由畫布於一般與投影模式皆完美置中
+                let maxX = 640, maxY = 460;
                 this.state.freeDesks.forEach(d => {
-                    maxX = Math.max(maxX, d.x + 150);
-                    maxY = Math.max(maxY, d.y + 140);
+                    maxX = Math.max(maxX, d.x + 152);
+                    maxY = Math.max(maxY, d.y + 136);
+                });
+                (this.state.freeZones || []).forEach(z => {
+                    maxX = Math.max(maxX, z.x + z.w + 40);
+                    maxY = Math.max(maxY, z.y + z.h + 40);
                 });
                 chart.style.minWidth = `${maxX}px`;
+                chart.style.width = `${maxX}px`;
                 chart.style.minHeight = `${maxY}px`;
                 chart.classList.toggle('freeform-edit-mode', this.isFreeformEditMode);
 
                 const isFlipped = this.state.viewPerspective === 'student';
+
+                // 先繪製已綁定的畫布分組底框與自訂空間區（走道／障礙物）
+                this.renderFreeGroupZones(maxX, maxY, isFlipped);
+                this.renderFreeSpaceZones(maxX, maxY, isFlipped);
 
                 this.state.freeDesks.forEach(deskData => {
                     const deskEl = this.createDeskElement(deskData.id, null);
@@ -2214,6 +2792,343 @@
                 return this.state.freeDesks.length;
             }
 
+            renderFreeGroupZones(maxX, maxY, isFlipped) {
+                const chart = this.elements.seatingChart;
+                this.cleanupEmptyFreeGroups();
+                if (!this.state.freeGroups || this.state.freeGroups.length === 0) return;
+
+                const scale = (this.state.zoomScale || 100) / 100;
+                const deskW = Math.round(108 * scale);
+                const deskH = Math.round(84 * scale);
+
+                this.state.freeGroups.forEach(fg => {
+                    const groupDesks = this.state.freeDesks.filter(d => d.groupId === fg.id);
+                    if (groupDesks.length === 0) return;
+
+                    const baseAngle = typeof fg.angle === 'number'
+                        ? fg.angle
+                        : Math.round(groupDesks.reduce((s, d) => s + (d.angle || 0), 0) / groupDesks.length);
+                    fg.angle = baseAngle;
+                    const renderAngle = isFlipped ? ((baseAngle + 180) % 360) : baseAngle;
+
+                    // 計算所有桌子在畫布上的中心點
+                    const centers = groupDesks.map(d => {
+                        const rx = isFlipped ? Math.max(10, maxX - d.x - 120) : d.x;
+                        const ry = isFlipped ? Math.max(10, maxY - d.y - 100) : d.y;
+                        return { x: rx + deskW / 2, y: ry + deskH / 2 };
+                    });
+                    const avgCx = centers.reduce((s, p) => s + p.x, 0) / centers.length;
+                    const avgCy = centers.reduce((s, p) => s + p.y, 0) / centers.length;
+
+                    // 將各桌中心投影至「反轉 -renderAngle」的局部座標系，算出精準貼合的旋轉外接框 (OBB)
+                    const rad = (renderAngle * Math.PI) / 180;
+                    const cosNeg = Math.cos(-rad), sinNeg = Math.sin(-rad);
+                    let minLX = Infinity, maxLX = -Infinity, minLY = Infinity, maxLY = -Infinity;
+                    centers.forEach(p => {
+                        const dx = p.x - avgCx;
+                        const dy = p.y - avgCy;
+                        const lx = dx * cosNeg - dy * sinNeg;
+                        const ly = dx * sinNeg + dy * cosNeg;
+                        minLX = Math.min(minLX, lx - deskW / 2);
+                        maxLX = Math.max(maxLX, lx + deskW / 2);
+                        minLY = Math.min(minLY, ly - deskH / 2);
+                        maxLY = Math.max(maxLY, ly + deskH / 2);
+                    });
+
+                    const padX = 20;
+                    const padTop = 46;
+                    const padBottom = this.isFreeformEditMode ? 32 : 20;
+                    const zoneW = Math.max(190, Math.round((maxLX - minLX) + padX * 2));
+                    const zoneH = Math.max(130, Math.round((maxLY - minLY) + padTop + padBottom));
+
+                    // 計算外框在局部座標系的中心偏移，再轉回畫布座標
+                    const localBoxCx = (minLX + maxLX) / 2;
+                    const localBoxCy = ((minLY - padTop) + (maxLY + padBottom)) / 2;
+                    const cosPos = Math.cos(rad), sinPos = Math.sin(rad);
+                    const finalCx = avgCx + (localBoxCx * cosPos - localBoxCy * sinPos);
+                    const finalCy = avgCy + (localBoxCx * sinPos + localBoxCy * cosPos);
+
+                    const zoneLeft = Math.round(finalCx - zoneW / 2);
+                    const zoneTop = Math.round(finalCy - zoneH / 2);
+
+                    const colorObj = this.GROUP_COLORS[(fg.colorIdx || 0) % this.GROUP_COLORS.length];
+                    const members = this.getFreeGroupMembers(fg);
+                    const mCount = members.filter(s => s.gender === '男').length;
+                    const fCount = members.filter(s => s.gender === '女').length;
+
+                    const zone = document.createElement('div');
+                    zone.className = 'free-group-zone';
+                    zone.dataset.freeGroupId = fg.id;
+                    zone.style.left = `${zoneLeft}px`;
+                    zone.style.top = `${zoneTop}px`;
+                    zone.style.width = `${zoneW}px`;
+                    zone.style.height = `${zoneH}px`;
+                    zone.style.borderColor = colorObj.border;
+                    zone.style.backgroundColor = colorObj.bg;
+                    zone.style.setProperty('--item-rotate', `${renderAngle}deg`);
+
+                    const header = document.createElement('div');
+                    header.className = 'free-group-header';
+
+                    const titlePill = document.createElement('div');
+                    titlePill.className = 'free-group-title-pill';
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'free-group-name-text';
+                    nameSpan.textContent = fg.name;
+                    nameSpan.title = '點擊編輯組名';
+                    const nameInput = document.createElement('input');
+                    nameInput.className = 'free-group-name-input';
+                    nameInput.value = fg.name;
+                    nameInput.addEventListener('blur', () => {
+                        const val = nameInput.value.trim() || fg.name;
+                        fg.name = val;
+                        nameSpan.textContent = val;
+                        nameSpan.classList.remove('editing');
+                        nameInput.classList.remove('editing');
+                        this.commitState(true);
+                    });
+                    nameInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') nameInput.blur();
+                        if (e.key === 'Escape') { nameInput.value = fg.name; nameInput.blur(); }
+                    });
+                    const stats = document.createElement('span');
+                    stats.className = 'text-[10px] text-slate-500 no-print';
+                    stats.innerHTML = `${members.length}/${groupDesks.length} <i class="fas fa-mars text-blue-500"></i>${mCount} <i class="fas fa-venus text-pink-500"></i>${fCount}`;
+                    titlePill.append(nameSpan, nameInput, stats);
+
+                    const rightTools = document.createElement('div');
+                    rightTools.className = 'flex items-center gap-1 no-print';
+                    rightTools.innerHTML = `
+                        <span class="free-group-score-pill">
+                            <button type="button" class="free-group-score-minus text-rose-600 hover:text-rose-800 px-0.5" data-fg-id="${fg.id}" title="扣 1 分"><i class="fas fa-minus"></i></button>
+                            <span><i class="fas fa-star text-amber-500 mr-0.5"></i><span class="fg-score-val">${fg.score || 0}</span></span>
+                            <button type="button" class="free-group-score-plus text-emerald-600 hover:text-emerald-800 px-0.5" data-fg-id="${fg.id}" title="加 1 分"><i class="fas fa-plus"></i></button>
+                        </span>
+                        <button type="button" class="group-action-btn free-group-rot-left bg-violet-600" data-fg-id="${fg.id}" title="整組向左旋轉 15 度"><i class="fas fa-rotate-left"></i></button>
+                        <button type="button" class="group-action-btn free-group-rot-right bg-violet-600" data-fg-id="${fg.id}" title="整組向右旋轉 15 度"><i class="fas fa-rotate-right"></i></button>
+                        <button type="button" class="group-action-btn free-group-select-btn bg-blue-600" data-fg-id="${fg.id}" title="選取整組桌子"><i class="fas fa-object-group"></i></button>
+                        <button type="button" class="group-action-btn free-group-color-btn" data-fg-id="${fg.id}" style="background:${colorObj.border}" title="切換代表色"><i class="fas fa-palette"></i></button>
+                        <button type="button" class="group-action-btn free-group-unbind-btn bg-rose-500" data-fg-id="${fg.id}" title="解散此畫布分組"><i class="fas fa-object-ungroup"></i></button>
+                    `;
+
+                    header.append(titlePill, rightTools);
+                    zone.appendChild(header);
+
+                    // 編排模式下，按住分組標題列空白處也可直接拖曳整組移動
+                    if (this.isFreeformEditMode) {
+                        header.style.cursor = 'move';
+                        this.attachFreeGroupHeaderDrag(header, zone, fg, maxX, maxY, isFlipped);
+                    }
+                    chart.appendChild(zone);
+                });
+            }
+
+            attachFreeGroupHeaderDrag(headerEl, zoneEl, fg, maxX, maxY, isFlipped) {
+                let dragging = false, startX = 0, startY = 0, moved = false;
+                let groupItems = [];
+                let zoneOrigLeft = 0, zoneOrigTop = 0;
+
+                headerEl.addEventListener('pointerdown', (e) => {
+                    if (e.target.closest('button, input, .free-group-name-text')) return;
+                    if (e.button !== 0) return;
+                    e.stopPropagation();
+
+                    const desksInGroup = this.state.freeDesks.filter(d => d.groupId === fg.id);
+                    groupItems = desksInGroup.map(d => {
+                        const el = this.elements.seatingChart.querySelector(`.desk[data-desk-id="${d.id}"]`);
+                        if (!el) return null;
+                        el.classList.add('is-moving-desk');
+                        return { el, data: d, origLeft: parseFloat(el.style.left) || 0, origTop: parseFloat(el.style.top) || 0 };
+                    }).filter(Boolean);
+                    if (groupItems.length === 0) return;
+
+                    zoneOrigLeft = parseFloat(zoneEl.style.left) || 0;
+                    zoneOrigTop = parseFloat(zoneEl.style.top) || 0;
+                    dragging = true;
+                    moved = false;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    headerEl.setPointerCapture(e.pointerId);
+                });
+
+                headerEl.addEventListener('pointermove', (e) => {
+                    if (!dragging || groupItems.length === 0) return;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    if (!moved && Math.hypot(dx, dy) > 3) moved = true;
+                    if (!moved) return;
+                    e.preventDefault();
+
+                    let stepDx = dx, stepDy = dy;
+                    if (this.state.snapToGrid) {
+                        const anchor = groupItems[0];
+                        stepDx = Math.round((anchor.origLeft + dx) / 20) * 20 - anchor.origLeft;
+                        stepDy = Math.round((anchor.origTop + dy) / 20) * 20 - anchor.origTop;
+                    }
+                    const minOrigLeft = Math.min(...groupItems.map(it => it.origLeft));
+                    const minOrigTop = Math.min(...groupItems.map(it => it.origTop));
+                    if (minOrigLeft + stepDx < 16) stepDx = 16 - minOrigLeft;
+                    if (minOrigTop + stepDy < 36) stepDy = 36 - minOrigTop;
+
+                    zoneEl.style.left = `${zoneOrigLeft + stepDx}px`;
+                    zoneEl.style.top = `${zoneOrigTop + stepDy}px`;
+                    groupItems.forEach(it => {
+                        it.el.style.left = `${it.origLeft + stepDx}px`;
+                        it.el.style.top = `${it.origTop + stepDy}px`;
+                    });
+                });
+
+                const finish = (e) => {
+                    if (!dragging) return;
+                    dragging = false;
+                    groupItems.forEach(it => it.el.classList.remove('is-moving-desk'));
+                    if (headerEl.hasPointerCapture(e.pointerId)) headerEl.releasePointerCapture(e.pointerId);
+                    if (moved) {
+                        groupItems.forEach(it => {
+                            const fl = parseFloat(it.el.style.left) || 0;
+                            const ft = parseFloat(it.el.style.top) || 0;
+                            it.data.x = isFlipped ? Math.max(10, maxX - fl - 120) : fl;
+                            it.data.y = isFlipped ? Math.max(10, maxY - ft - 100) : ft;
+                        });
+                        this.renderSeatingChart();
+                        this.commitState(true);
+                    }
+                    groupItems = [];
+                };
+                headerEl.addEventListener('pointerup', finish);
+                headerEl.addEventListener('pointercancel', finish);
+            }
+
+            renderFreeSpaceZones(maxX, maxY, isFlipped) {
+                const chart = this.elements.seatingChart;
+                if (!Array.isArray(this.state.freeZones) || this.state.freeZones.length === 0) return;
+
+                this.state.freeZones.forEach(z => {
+                    const renderX = isFlipped ? Math.max(10, maxX - z.x - z.w) : z.x;
+                    const renderY = isFlipped ? Math.max(10, maxY - z.y - z.h) : z.y;
+                    const renderAngle = isFlipped ? (((z.angle || 0) + 180) % 360) : (z.angle || 0);
+
+                    const el = document.createElement('div');
+                    el.className = 'free-space-zone';
+                    el.dataset.zoneId = z.id;
+                    el.style.left = `${renderX}px`;
+                    el.style.top = `${renderY}px`;
+                    el.style.width = `${z.w}px`;
+                    el.style.height = `${z.h}px`;
+                    el.style.setProperty('--item-rotate', `${renderAngle}deg`);
+
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'free-space-label';
+                    labelSpan.textContent = z.label || '走道 / 空間區';
+                    labelSpan.title = '點擊修改空間區名稱';
+
+                    const labelInput = document.createElement('input');
+                    labelInput.className = 'free-space-input';
+                    labelInput.value = z.label || '走道 / 空間區';
+                    labelInput.addEventListener('blur', () => {
+                        const val = labelInput.value.trim() || '走道 / 空間區';
+                        z.label = val;
+                        labelSpan.textContent = val;
+                        labelSpan.classList.remove('editing');
+                        labelInput.classList.remove('editing');
+                        this.commitState(true);
+                    });
+                    labelInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') labelInput.blur();
+                        if (e.key === 'Escape') { labelInput.value = z.label || '走道 / 空間區'; labelInput.blur(); }
+                    });
+
+                    const ctrl = document.createElement('div');
+                    ctrl.className = 'free-zone-controls no-print';
+                    ctrl.innerHTML = `
+                        <button type="button" class="free-ctrl-btn free-zone-rot-left" data-zone-id="${z.id}" title="向左轉 15 度"><i class="fas fa-rotate-left"></i></button>
+                        <span class="text-[9px] font-mono text-orange-100 px-0.5">${z.angle || 0}°</span>
+                        <button type="button" class="free-ctrl-btn free-zone-rot-right" data-zone-id="${z.id}" title="向右轉 15 度"><i class="fas fa-rotate-right"></i></button>
+                        <button type="button" class="free-ctrl-btn free-del-btn free-zone-del" data-zone-id="${z.id}" title="刪除此空間區"><i class="fas fa-trash"></i></button>
+                    `;
+
+                    const resizeHandle = document.createElement('div');
+                    resizeHandle.className = 'free-zone-resize no-print';
+                    resizeHandle.title = '拖曳調整空間區大小';
+
+                    el.append(ctrl, labelSpan, labelInput, resizeHandle);
+
+                    const canEditZone = (this.state.seatingMode === 'freeform' && this.isFreeformEditMode)
+                        || (this.state.seatingMode === 'group' && this.state.groupsPerRow === 'free');
+                    if (canEditZone) {
+                        // 拖曳移動空間區
+                        let dragging = false, sx = 0, sy = 0, ol = 0, ot = 0, moved = false;
+                        el.addEventListener('pointerdown', (e) => {
+                            if (e.target.closest('button, input, .free-space-label, .free-zone-resize')) return;
+                            if (e.button !== 0) return;
+                            e.stopPropagation();
+                            dragging = true; moved = false;
+                            sx = e.clientX; sy = e.clientY;
+                            ol = parseFloat(el.style.left) || 0;
+                            ot = parseFloat(el.style.top) || 0;
+                            el.classList.add('active-zone');
+                            el.setPointerCapture(e.pointerId);
+                        });
+                        el.addEventListener('pointermove', (e) => {
+                            if (!dragging) return;
+                            const dx = e.clientX - sx, dy = e.clientY - sy;
+                            if (!moved && Math.hypot(dx, dy) > 3) moved = true;
+                            if (!moved) return;
+                            e.preventDefault();
+                            let nl = Math.max(8, ol + dx), nt = Math.max(8, ot + dy);
+                            if (this.state.snapToGrid) { nl = Math.round(nl / 20) * 20; nt = Math.round(nt / 20) * 20; }
+                            el.style.left = `${nl}px`;
+                            el.style.top = `${nt}px`;
+                        });
+                        const endMove = (e) => {
+                            if (!dragging) return;
+                            dragging = false;
+                            el.classList.remove('active-zone');
+                            if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+                            if (moved) {
+                                const fl = parseFloat(el.style.left) || 0, ft = parseFloat(el.style.top) || 0;
+                                z.x = isFlipped ? Math.max(10, maxX - fl - z.w) : fl;
+                                z.y = isFlipped ? Math.max(10, maxY - ft - z.h) : ft;
+                                this.commitState(true);
+                            }
+                        };
+                        el.addEventListener('pointerup', endMove);
+                        el.addEventListener('pointercancel', endMove);
+
+                        // 右下角拖曳調整大小
+                        let resizing = false, rsx = 0, rsy = 0, ow = 0, oh = 0;
+                        resizeHandle.addEventListener('pointerdown', (e) => {
+                            if (e.button !== 0) return;
+                            e.stopPropagation();
+                            resizing = true;
+                            rsx = e.clientX; rsy = e.clientY;
+                            ow = z.w; oh = z.h;
+                            resizeHandle.setPointerCapture(e.pointerId);
+                        });
+                        resizeHandle.addEventListener('pointermove', (e) => {
+                            if (!resizing) return;
+                            e.preventDefault();
+                            let nw = Math.max(60, ow + (e.clientX - rsx));
+                            let nh = Math.max(40, oh + (e.clientY - rsy));
+                            if (this.state.snapToGrid) { nw = Math.round(nw / 20) * 20; nh = Math.round(nh / 20) * 20; }
+                            el.style.width = `${nw}px`;
+                            el.style.height = `${nh}px`;
+                            z.w = nw; z.h = nh;
+                        });
+                        const endResize = (e) => {
+                            if (!resizing) return;
+                            resizing = false;
+                            if (resizeHandle.hasPointerCapture(e.pointerId)) resizeHandle.releasePointerCapture(e.pointerId);
+                            this.commitState(true);
+                        };
+                        resizeHandle.addEventListener('pointerup', endResize);
+                        resizeHandle.addEventListener('pointercancel', endResize);
+                    }
+
+                    chart.appendChild(el);
+                });
+            }
+
             appendFreeformControls() {
                 const chart = this.elements.seatingChart;
                 this.state.freeDesks.forEach(deskData => {
@@ -2236,6 +3151,7 @@
                 let startClientX = 0, startClientY = 0;
                 let moved = false;
                 let groupItems = []; // [{ el, data, origLeft, origTop }]
+                let movingZones = []; // [{ el, origLeft, origTop }]
 
                 deskEl.addEventListener('pointerdown', (e) => {
                     if (e.target.closest('.free-desk-controls, .lock-btn')) return;
@@ -2250,19 +3166,40 @@
                         return;
                     }
 
-                    // 若點到未選取的桌子，清除先前多選；若點到已選取的桌子，整群一起拖曳
+                    // 決定本次連動拖曳的桌子群：
+                    // 1. 若已在多選群內 -> 拖曳全部已選桌子
+                    // 2. 否則若此桌已綁定為畫布小組（且未按 Alt 單獨微調）-> 自動整組一起拖曳移動！
                     const isMultiDrag = this.selectedFreeDeskIds.has(deskData.id) && this.selectedFreeDeskIds.size > 1;
                     if (!isMultiDrag && this.selectedFreeDeskIds.size > 0 && !this.selectedFreeDeskIds.has(deskData.id)) {
                         this.clearFreeSelection();
                     }
 
-                    const targetIds = isMultiDrag ? Array.from(this.selectedFreeDeskIds) : [deskData.id];
+                    let targetIds;
+                    if (isMultiDrag) {
+                        targetIds = Array.from(this.selectedFreeDeskIds);
+                    } else if (deskData.groupId && !e.altKey) {
+                        targetIds = this.state.freeDesks.filter(d => d.groupId === deskData.groupId).map(d => d.id);
+                    } else {
+                        targetIds = [deskData.id];
+                    }
+
                     groupItems = targetIds.map(id => {
                         const el = this.elements.seatingChart.querySelector(`.desk[data-desk-id="${id}"]`);
                         const data = this.state.freeDesks.find(d => d.id === id);
                         if (!el || !data) return null;
                         el.classList.add('is-moving-desk');
                         return { el, data, origLeft: parseFloat(el.style.left) || 0, origTop: parseFloat(el.style.top) || 0 };
+                    }).filter(Boolean);
+
+                    // 找出完整包含在本次拖曳內的畫布分組底框，讓底框跟著整組同步平移
+                    const targetIdSet = new Set(targetIds);
+                    movingZones = (this.state.freeGroups || []).map(fg => {
+                        const fgDesks = this.state.freeDesks.filter(d => d.groupId === fg.id);
+                        if (fgDesks.length > 0 && fgDesks.every(d => targetIdSet.has(d.id))) {
+                            const zEl = this.elements.seatingChart.querySelector(`.free-group-zone[data-free-group-id="${fg.id}"]`);
+                            if (zEl) return { el: zEl, origLeft: parseFloat(zEl.style.left) || 0, origTop: parseFloat(zEl.style.top) || 0 };
+                        }
+                        return null;
                     }).filter(Boolean);
 
                     dragging = true;
@@ -2295,6 +3232,10 @@
                     if (minOrigLeft + stepDx < 8) stepDx = 8 - minOrigLeft;
                     if (minOrigTop + stepDy < 8) stepDy = 8 - minOrigTop;
 
+                    movingZones.forEach(z => {
+                        z.el.style.left = `${z.origLeft + stepDx}px`;
+                        z.el.style.top = `${z.origTop + stepDy}px`;
+                    });
                     groupItems.forEach(it => {
                         it.el.style.left = `${it.origLeft + stepDx}px`;
                         it.el.style.top = `${it.origTop + stepDy}px`;
@@ -2313,9 +3254,12 @@
                             it.data.x = isFlipped ? Math.max(10, maxX - finalLeft - 120) : finalLeft;
                             it.data.y = isFlipped ? Math.max(10, maxY - finalTop - 100) : finalTop;
                         });
+                        // 若移動了任何帶分組的桌子，重新繪製讓分組底框精準貼合
+                        if (groupItems.some(it => it.data.groupId)) this.renderSeatingChart();
                         this.commitState(true);
                     }
                     groupItems = [];
+                    movingZones = [];
                 };
 
                 deskEl.addEventListener('pointerup', finishMove);
@@ -2702,6 +3646,7 @@
                     const dA = this.state.freeDesks.find(d => d.id === deskIdA);
                     const dB = this.state.freeDesks.find(d => d.id === deskIdB);
                     if (!dA || !dB) return false;
+                    if (dA.groupId && dB.groupId) return dA.groupId === dB.groupId;
                     return Math.hypot(dA.x - dB.x, dA.y - dB.y) < 145;
                 }
                 return deskIdA.split('d')[0] === deskIdB.split('d')[0];
@@ -2791,20 +3736,70 @@
                 const unlockedDeskIds = allDeskIds.filter(id => !newLayoutMap.has(id));
                 let conflictLeft = 0;
 
+                // 分組模式（或自由畫布有已綁定分組）隨機／智慧排位時：自動將未鎖定的「組長」優先分散到不同小組
+                if (randomize && (this.state.seatingMode === 'group' || (this.state.seatingMode === 'freeform' && (this.state.freeGroups || []).length > 0))) {
+                    const unassignedLeaders = this.shuffleArray(availableStudents.filter(s => this.state.studentRoles[s.id] === '組長'));
+                    if (unassignedLeaders.length > 0) {
+                        const deskById = this.state.seatingMode === 'freeform'
+                            ? new Map(this.state.freeDesks.map(d => [d.id, d]))
+                            : null;
+                        const getGroupIdOfDesk = (deskId) => this.state.seatingMode === 'group'
+                            ? deskId.split('d')[0]
+                            : (deskById.get(deskId) ? deskById.get(deskId).groupId : null);
+
+                        // 找出已有鎖定組長的小組
+                        const groupsWithLeader = new Set();
+                        newLayoutMap.forEach((stu, dId) => {
+                            if (this.state.studentRoles[stu.id] === '組長') {
+                                const gId = getGroupIdOfDesk(dId);
+                                if (gId) groupsWithLeader.add(gId);
+                            }
+                        });
+
+                        const groupList = this.state.seatingMode === 'group' ? this.state.groups : this.state.freeGroups;
+                        const placedLeaderIds = new Set();
+                        groupList.forEach(g => {
+                            if (unassignedLeaders.length === 0 || groupsWithLeader.has(g.id)) return;
+                            const firstSlot = unlockedDeskIds.find(id => !newLayoutMap.has(id) && getGroupIdOfDesk(id) === g.id);
+                            if (firstSlot) {
+                                const leader = unassignedLeaders.shift();
+                                newLayoutMap.set(firstSlot, leader);
+                                placedLeaderIds.add(leader.id);
+                                groupsWithLeader.add(g.id);
+                            }
+                        });
+                        if (placedLeaderIds.size > 0) {
+                            availableStudents = availableStudents.filter(s => !placedLeaderIds.has(s.id));
+                        }
+                    }
+                }
+                const remainingUnlockedIds = allDeskIds.filter(id => !newLayoutMap.has(id));
+
                 if (!randomize) {
                     let idx = 0;
-                    unlockedDeskIds.forEach(deskId => {
+                    remainingUnlockedIds.forEach(deskId => {
                         if (idx < availableStudents.length) newLayoutMap.set(deskId, availableStudents[idx++]);
                     });
                     while (idx < availableStudents.length) this.state.waitingBench.push(availableStudents[idx++]);
                 } else if (this.state.shuffleStrategy === 'snake') {
-                    // S 型異質分組（維持名單順序，蛇形輪流放入各組／各行）
-                    if (this.state.seatingMode === 'group') {
-                        this.ensureGroupsInitialized();
-                        const groupBuckets = this.state.groups.map(g => ({
-                            id: g.id,
-                            slots: unlockedDeskIds.filter(d => d.startsWith(`${g.id}d`))
-                        }));
+                    // S 型異質分組（分組模式與已綁定畫布分組皆依各組蛇形輪流分配）
+                    if (this.state.seatingMode === 'group' || (this.state.seatingMode === 'freeform' && (this.state.freeGroups || []).length > 0)) {
+                        let groupBuckets;
+                        if (this.state.seatingMode === 'group') {
+                            this.ensureGroupsInitialized();
+                            groupBuckets = this.state.groups.map(g => ({
+                                id: g.id,
+                                slots: remainingUnlockedIds.filter(d => d.startsWith(`${g.id}d`))
+                            }));
+                        } else {
+                            const deskById = new Map(this.state.freeDesks.map(d => [d.id, d]));
+                            groupBuckets = this.state.freeGroups.map(fg => ({
+                                id: fg.id,
+                                slots: remainingUnlockedIds.filter(id => deskById.get(id) && deskById.get(id).groupId === fg.id)
+                            }));
+                            const ungroupedSlots = remainingUnlockedIds.filter(id => !deskById.get(id) || !deskById.get(id).groupId);
+                            if (ungroupedSlots.length > 0) groupBuckets.push({ id: '__ungrouped__', slots: ungroupedSlots });
+                        }
                         let sIdx = 0;
                         let round = 0;
                         while (sIdx < availableStudents.length && groupBuckets.some(b => b.slots.length > 0)) {
@@ -2828,7 +3823,7 @@
                                 : Array.from({ length: this.state.cols }, (_, c) => this.state.cols - 1 - c);
                             colOrder.forEach(c => {
                                 const id = `r${r}c${c}`;
-                                if (unlockedDeskIds.includes(id)) snakeDeskOrder.push(id);
+                                if (remainingUnlockedIds.includes(id)) snakeDeskOrder.push(id);
                             });
                         }
                         let sIdx = 0;
@@ -2837,13 +3832,13 @@
                         });
                         while (sIdx < availableStudents.length) this.state.waitingBench.push(availableStudents[sIdx++]);
                     }
-                    conflictLeft = this.resolveRulesWithLocalSearch(newLayoutMap, unlockedDeskIds);
+                    conflictLeft = this.resolveRulesWithLocalSearch(newLayoutMap, remainingUnlockedIds);
                 } else {
                     // 一般隨機 或 男女梅花座 / 分組男女平均
                     const frontStudents = this.shuffleArray(availableStudents.filter(s => this.isStudentFrontPriority(s)));
                     const normalStudents = this.shuffleArray(availableStudents.filter(s => !this.isStudentFrontPriority(s)));
 
-                    let remainingDesks = [...unlockedDeskIds];
+                    let remainingDesks = [...remainingUnlockedIds];
                     let poolToPlace = [];
 
                     if (this.state.seatingMode === 'traditional' && frontStudents.length > 0) {
@@ -3008,9 +4003,18 @@
             }
 
             runRandomGroupPicker() {
-                if (this.isAnimating || this.state.seatingMode !== 'group') return;
-                this.ensureGroupsInitialized();
-                const nonEmptyGroups = this.state.groups.filter(g => this.getGroupMembers(g).length > 0);
+                if (this.isAnimating) return;
+                const isFreeGroupMode = this.state.seatingMode === 'freeform';
+                if (!isFreeGroupMode && this.state.seatingMode !== 'group') return;
+
+                let nonEmptyGroups;
+                if (isFreeGroupMode) {
+                    this.cleanupEmptyFreeGroups();
+                    nonEmptyGroups = (this.state.freeGroups || []).filter(g => this.getFreeGroupMembers(g).length > 0);
+                } else {
+                    this.ensureGroupsInitialized();
+                    nonEmptyGroups = this.state.groups.filter(g => this.getGroupMembers(g).length > 0);
+                }
                 if (nonEmptyGroups.length === 0) { this.showToast('目前沒有包含學生的分組', 'warning'); return; }
 
                 this.lastPickerMode = 'group';
@@ -3029,6 +4033,10 @@
                 this.elements.randomGroupPickerBtn.disabled = true;
                 document.querySelectorAll('.picker-winner, .picker-active').forEach(el => el.classList.remove('picker-winner', 'picker-active'));
 
+                const getGroupEl = (g) => isFreeGroupMode
+                    ? this.elements.seatingChart.querySelector(`.free-group-zone[data-free-group-id="${g.id}"]`)
+                    : this.elements.seatingChart.querySelector(`.group-container[data-group-key="${g.id}"]`);
+
                 const winnerGroup = candidates[Math.floor(Math.random() * candidates.length)];
                 const totalSteps = 14;
                 let stepIdx = 0;
@@ -3037,13 +4045,13 @@
                     document.querySelectorAll('.picker-active').forEach(el => el.classList.remove('picker-active'));
                     if (stepIdx < totalSteps) {
                         const randGroup = nonEmptyGroups[Math.floor(Math.random() * nonEmptyGroups.length)];
-                        const gEl = this.elements.seatingChart.querySelector(`.group-container[data-group-key="${randGroup.id}"]`);
+                        const gEl = getGroupEl(randGroup);
                         if (gEl) gEl.classList.add('picker-active');
                         this.playTone(380 + stepIdx * 30, 0.05, 'triangle', 0.08);
                         stepIdx++;
                         setTimeout(tick, 60 + stepIdx * 11);
                     } else {
-                        const winEl = this.elements.seatingChart.querySelector(`.group-container[data-group-key="${winnerGroup.id}"]`);
+                        const winEl = getGroupEl(winnerGroup);
                         if (winEl) {
                             winEl.classList.add('picker-winner');
                             winEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
@@ -3053,7 +4061,8 @@
                         this.playCelebrationChord();
                         if (noRepeat) this.pickedGroupIds.add(winnerGroup.id);
 
-                        const members = this.getGroupMembers(winnerGroup).map(s => this.state.showAnonymous ? this.anonymizeName(s.name) : s.name);
+                        const rawMembers = isFreeGroupMode ? this.getFreeGroupMembers(winnerGroup) : this.getGroupMembers(winnerGroup);
+                        const members = rawMembers.map(s => this.state.showAnonymous ? this.anonymizeName(s.name) : s.name);
                         this.elements.pickerModalHeader.className = 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 px-4 font-bold text-sm';
                         this.elements.pickerModalTitle.textContent = '幸運被抽中的小組';
                         this.elements.pickerWinnerNumber.textContent = `共 ${members.length} 位組員`;
@@ -3213,7 +4222,7 @@
                 layout.classList.toggle('view-style-group-scores', Boolean(this.state.showGroupScores));
                 layout.classList.toggle('view-style-anonymous', this.state.showAnonymous);
 
-                this.elements.resetScoresWrap.classList.toggle('hidden', !this.state.showGroupScores || this.state.seatingMode !== 'group');
+                this.elements.resetScoresWrap.classList.toggle('hidden', !this.state.showGroupScores || (this.state.seatingMode !== 'group' && !(this.state.seatingMode === 'freeform' && (this.state.freeGroups || []).length > 0)));
                 if (this.elements.mascot) this.elements.mascot.classList.toggle('hidden', !this.state.showMascot);
 
                 if (!this.state.showEmptySeats && this.state.seatingMode === 'group') {
@@ -3252,9 +4261,11 @@
                 this.elements.enableSoundEffects.checked = this.state.enableSoundEffects !== false;
                 this.elements.shuffleStrategySelect.value = this.state.shuffleStrategy || 'random';
                 this.elements.sideMarkersSelect.value = this.state.sideMarkers || 'none';
-                this.elements.groupsPerRowSelect.value = this.state.groupsPerRow || 'auto';
+                this.elements.groupsPerRowSelect.value = this.state.groupsPerRow || 'free';
                 this.elements.defaultGroupColsSelect.value = this.state.defaultGroupCols || '2';
-                this.elements.snapToGridCheckbox.checked = this.state.snapToGrid !== false;
+                const snapChecked = this.state.snapToGrid !== false;
+                this.elements.snapToGridCheckbox.checked = snapChecked;
+                if (this.elements.groupSnapToGridCheckbox) this.elements.groupSnapToGridCheckbox.checked = snapChecked;
             }
 
             // ============================================================
@@ -3278,7 +4289,9 @@
                         mustGroupPairs: this.state.mustGroupPairs,
                         waitingBench: this.state.waitingBench,
                         groups: this.state.groups,
-                        freeDesks: this.state.freeDesks
+                        freeDesks: this.state.freeDesks,
+                        freeGroups: this.state.freeGroups || [],
+                        freeZones: this.state.freeZones || []
                     },
                     studentText: this.elements.studentsTextarea.value,
                     version: '5.0'
@@ -3447,12 +4460,13 @@
                 const seatingChart = this.elements.seatingChart;
                 seatingChart.innerHTML = '';
                 seatingChart.style.minWidth = '';
+                seatingChart.style.width = '';
                 seatingChart.style.minHeight = '';
 
                 let modeClasses = `transition-all min-h-[260px] rounded bg-white shadow-sm pb-6 flex-grow mode-${this.state.seatingMode}`;
                 if (this.state.seatingMode === 'group') {
-                    const gpr = this.state.groupsPerRow || 'auto';
-                    modeClasses += gpr === 'auto' ? ' groups-per-row-auto' : ' groups-per-row-fixed';
+                    const gpr = this.state.groupsPerRow || 'free';
+                    modeClasses += gpr === 'auto' ? ' groups-per-row-auto' : gpr === 'free' ? ' groups-per-row-free' : ' groups-per-row-fixed';
                 }
                 seatingChart.className = modeClasses;
 
@@ -3501,7 +4515,8 @@
                 this.elements.clearDisabledBtn.classList.toggle('hidden', this.state.disabledDeskIds.size === 0);
 
                 if (!this.isEditingDisabled && !(this.state.seatingMode === 'freeform' && this.isFreeformEditMode)) {
-                    if (this.state.seatingMode === 'group') this.initGroupSorting();
+                    // 分組自由畫布模式停用 SortableJS 整組排序，改由標題列 Pointer 自由定位
+                    if (this.state.seatingMode === 'group' && this.state.groupsPerRow !== 'free') this.initGroupSorting();
                     if (this.state.seatingMode === 'freeform') {
                         // 自由畫布在安排學生模式一律使用原生兩兩互換拖曳（不破壞座標位置）
                         this.initNativeDrag();
@@ -3538,11 +4553,67 @@
                 return validCount;
             }
 
+            ensureGroupFreeCoords() {
+                this.ensureGroupsInitialized();
+                const colsCount = Math.min(3, Math.max(2, Math.ceil(Math.sqrt(this.state.groups.length))));
+                this.state.groups.forEach((g, idx) => {
+                    if (typeof g.x !== 'number' || typeof g.y !== 'number') {
+                        const r = Math.floor(idx / colsCount);
+                        const c = idx % colsCount;
+                        g.x = 32 + c * 280;
+                        g.y = 32 + r * 260;
+                    }
+                });
+            }
+
+            autoArrangeGroupCoords() {
+                this.ensureGroupsInitialized();
+                const colsCount = Math.min(3, Math.max(2, Math.ceil(Math.sqrt(this.state.groups.length))));
+                this.state.groups.forEach((g, idx) => {
+                    const r = Math.floor(idx / colsCount);
+                    const c = idx % colsCount;
+                    g.x = 32 + c * 280;
+                    g.y = 32 + r * 260;
+                });
+                this.renderSeatingChart();
+                this.commitState(true);
+                this.showToast('已將所有小組重新整齊對齊排列', 'success', 1800);
+            }
+
             renderGroupLayout() {
                 const chart = this.elements.seatingChart;
-                const gpr = this.state.groupsPerRow || 'auto';
-                chart.style.gridTemplateColumns = gpr === 'auto' ? '' : `repeat(${gpr}, max-content)`;
+                const gpr = this.state.groupsPerRow || 'free';
+                const isFreeGroupCanvas = gpr === 'free';
+                chart.style.gridTemplateColumns = (gpr === 'auto' || isFreeGroupCanvas) ? '' : `repeat(${gpr}, max-content)`;
                 this.ensureGroupsInitialized();
+
+                if (isFreeGroupCanvas) {
+                    this.ensureGroupFreeCoords();
+                    let maxX = 760, maxY = 540;
+                    this.state.groups.forEach(g => {
+                        const colCnt = g.cols === 'row' ? Math.max(1, g.seatCount) : Math.max(1, parseInt(g.cols, 10) || 2);
+                        const rowCnt = Math.ceil(g.seatCount / colCnt);
+                        const estW = colCnt * 116 + 44;
+                        const estH = rowCnt * 94 + 74;
+                        maxX = Math.max(maxX, (g.x || 0) + estW + 32);
+                        maxY = Math.max(maxY, (g.y || 0) + estH + 32);
+                    });
+                    (this.state.freeZones || []).forEach(z => {
+                        maxX = Math.max(maxX, (z.x || 0) + (z.w || 120) + 32);
+                        maxY = Math.max(maxY, (z.y || 0) + (z.h || 80) + 32);
+                    });
+                    chart.style.minWidth = `${maxX}px`;
+                    chart.style.width = `${maxX}px`;
+                    chart.style.minHeight = `${maxY}px`;
+                }
+
+                const isFlipped = this.state.viewPerspective === 'student';
+                const canvasW = parseFloat(chart.style.width) || 760;
+                const canvasH = parseFloat(chart.style.minHeight) || 540;
+
+                if (isFreeGroupCanvas) {
+                    this.renderFreeSpaceZones(canvasW, canvasH, isFlipped);
+                }
 
                 const groupContainers = [];
                 let totalDesks = 0;
@@ -3560,14 +4631,69 @@
                         desks.push(this.createDeskElement(`${group.id}d${d}`, null));
                         totalDesks++;
                     }
-                    if (this.state.viewPerspective === 'student') desks.reverse();
+                    if (isFlipped) desks.reverse();
                     desks.forEach(d => grid.appendChild(d));
+
+                    if (isFreeGroupCanvas) {
+                        const rx = isFlipped ? Math.max(12, canvasW - (group.x || 0) - (colCount * 116 + 44)) : (group.x || 24);
+                        const ry = isFlipped ? Math.max(12, canvasH - (group.y || 0) - 220) : (group.y || 24);
+                        container.style.left = `${rx}px`;
+                        container.style.top = `${ry}px`;
+                        const headerBar = container.querySelector('.group-header-bar');
+                        if (headerBar) {
+                            headerBar.style.cursor = 'move';
+                            this.attachGroupCanvasDrag(headerBar, container, group, canvasW, canvasH, isFlipped);
+                        }
+                    }
+
                     groupContainers.push(container);
                 });
 
-                if (this.state.viewPerspective === 'student') groupContainers.reverse();
+                if (isFlipped && !isFreeGroupCanvas) groupContainers.reverse();
                 groupContainers.forEach(g => chart.appendChild(g));
                 return totalDesks;
+            }
+
+            attachGroupCanvasDrag(headerEl, containerEl, group, canvasW, canvasH, isFlipped) {
+                let dragging = false, sx = 0, sy = 0, ol = 0, ot = 0, moved = false;
+                headerEl.addEventListener('pointerdown', (e) => {
+                    if (e.target.closest('button, input, .group-name-display')) return;
+                    if (e.button !== 0) return;
+                    e.stopPropagation();
+                    dragging = true; moved = false;
+                    sx = e.clientX; sy = e.clientY;
+                    ol = parseFloat(containerEl.style.left) || 0;
+                    ot = parseFloat(containerEl.style.top) || 0;
+                    containerEl.classList.add('is-moving-group');
+                    headerEl.setPointerCapture(e.pointerId);
+                });
+                headerEl.addEventListener('pointermove', (e) => {
+                    if (!dragging) return;
+                    const dx = e.clientX - sx, dy = e.clientY - sy;
+                    if (!moved && Math.hypot(dx, dy) > 3) moved = true;
+                    if (!moved) return;
+                    e.preventDefault();
+                    let nl = Math.max(8, ol + dx), nt = Math.max(8, ot + dy);
+                    if (this.state.snapToGrid) { nl = Math.round(nl / 20) * 20; nt = Math.round(nt / 20) * 20; }
+                    containerEl.style.left = `${nl}px`;
+                    containerEl.style.top = `${nt}px`;
+                });
+                const finish = (e) => {
+                    if (!dragging) return;
+                    dragging = false;
+                    containerEl.classList.remove('is-moving-group');
+                    if (headerEl.hasPointerCapture(e.pointerId)) headerEl.releasePointerCapture(e.pointerId);
+                    if (moved) {
+                        const fl = parseFloat(containerEl.style.left) || 0;
+                        const ft = parseFloat(containerEl.style.top) || 0;
+                        group.x = isFlipped ? Math.max(12, canvasW - fl - containerEl.offsetWidth) : fl;
+                        group.y = isFlipped ? Math.max(12, canvasH - ft - containerEl.offsetHeight) : ft;
+                        this.renderSeatingChart();
+                        this.commitState(true);
+                    }
+                };
+                headerEl.addEventListener('pointerup', finish);
+                headerEl.addEventListener('pointercancel', finish);
             }
 
             createGroupContainer(group, index) {
@@ -3626,11 +4752,17 @@
                 layoutBtn.title = `切換桌型（目前：${colLabel}）`;
                 layoutBtn.innerHTML = '<i class="fas fa-table-cells"></i>';
 
-                const rotateBtn = document.createElement('button');
-                rotateBtn.type = 'button';
-                rotateBtn.className = 'group-action-btn group-rotate-btn';
-                rotateBtn.title = `旋轉小組角度（目前：${group.angle || 0}°）`;
-                rotateBtn.innerHTML = '<i class="fas fa-rotate"></i>';
+                const rotateLeftBtn = document.createElement('button');
+                rotateLeftBtn.type = 'button';
+                rotateLeftBtn.className = 'group-action-btn group-rotate-btn group-rot-left';
+                rotateLeftBtn.title = `向左旋轉 15°（目前：${group.angle || 0}°）`;
+                rotateLeftBtn.innerHTML = '<i class="fas fa-rotate-left"></i>';
+
+                const rotateRightBtn = document.createElement('button');
+                rotateRightBtn.type = 'button';
+                rotateRightBtn.className = 'group-action-btn group-rotate-btn group-rot-right';
+                rotateRightBtn.title = `向右旋轉 15°（目前：${group.angle || 0}°）`;
+                rotateRightBtn.innerHTML = '<i class="fas fa-rotate-right"></i>';
 
                 const addSeatBtn = document.createElement('button');
                 addSeatBtn.type = 'button';
@@ -3644,8 +4776,24 @@
                 delBtn.title = '刪除此小組';
                 delBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
 
-                actionsDiv.append(colorBtn, layoutBtn, rotateBtn, addSeatBtn, delBtn);
+                actionsDiv.append(colorBtn, layoutBtn, rotateLeftBtn, rotateRightBtn, addSeatBtn, delBtn);
                 header.append(nameWrap, actionsDiv);
+
+                // 支援將學生卡片直接拖放到小組標題列進行轉組（滿員自動 +1、原組自動整理空位）
+                header.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    header.classList.add('transfer-drop-target');
+                });
+                header.addEventListener('dragleave', (e) => {
+                    if (!header.contains(e.relatedTarget)) header.classList.remove('transfer-drop-target');
+                });
+                header.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    header.classList.remove('transfer-drop-target');
+                    this.handleGroupHeaderTransferDrop(e, group.id);
+                });
 
                 // 小組計分板列
                 const scoreBar = document.createElement('div');
@@ -3854,6 +5002,100 @@
                     return;
                 }
 
+                // 自由畫布分組區域互動（改名、選取整組、換色、計分、解散）
+                if (e.target.closest('.free-group-name-text')) {
+                    const span = e.target.closest('.free-group-name-text');
+                    const input = span.nextElementSibling;
+                    span.classList.add('editing');
+                    input.classList.add('editing');
+                    input.focus();
+                    input.select();
+                    return;
+                }
+                if (e.target.closest('.free-group-rot-left')) {
+                    const btn = e.target.closest('.free-group-rot-left');
+                    this.rotateFreeGroup(btn.dataset.fgId, -15);
+                    return;
+                }
+                if (e.target.closest('.free-group-rot-right')) {
+                    const btn = e.target.closest('.free-group-rot-right');
+                    this.rotateFreeGroup(btn.dataset.fgId, 15);
+                    return;
+                }
+                if (e.target.closest('.free-group-select-btn')) {
+                    const btn = e.target.closest('.free-group-select-btn');
+                    this.selectFreeGroupDesks(btn.dataset.fgId);
+                    return;
+                }
+                if (e.target.closest('.free-group-color-btn')) {
+                    const btn = e.target.closest('.free-group-color-btn');
+                    const fg = (this.state.freeGroups || []).find(g => g.id === btn.dataset.fgId);
+                    if (fg) {
+                        fg.colorIdx = ((fg.colorIdx || 0) + 1) % this.GROUP_COLORS.length;
+                        this.renderSeatingChart();
+                        this.commitState(true);
+                    }
+                    return;
+                }
+                if (e.target.closest('.free-group-score-plus') || e.target.closest('.free-group-score-minus')) {
+                    const btn = e.target.closest('.free-group-score-plus, .free-group-score-minus');
+                    const fg = (this.state.freeGroups || []).find(g => g.id === btn.dataset.fgId);
+                    if (fg) {
+                        const delta = btn.classList.contains('free-group-score-plus') ? 1 : -1;
+                        fg.score = (fg.score || 0) + delta;
+                        this.playTone(delta > 0 ? 660 : 330, 0.07, 'sine', 0.08);
+                        const zone = btn.closest('.free-group-zone');
+                        const valEl = zone && zone.querySelector('.fg-score-val');
+                        if (valEl) valEl.textContent = String(fg.score);
+                        this.commitState(true);
+                    }
+                    return;
+                }
+                if (e.target.closest('.free-group-unbind-btn')) {
+                    const btn = e.target.closest('.free-group-unbind-btn');
+                    const fgId = btn.dataset.fgId;
+                    this.state.freeDesks.forEach(d => { if (d.groupId === fgId) delete d.groupId; });
+                    this.cleanupEmptyFreeGroups();
+                    this.updateConditionalInputs();
+                    this.renderSeatingChart();
+                    this.commitState(true);
+                    this.showToast('已解散此畫布分組', 'info', 1500);
+                    return;
+                }
+
+                // 空間區：點擊改名、雙向旋轉、刪除（優先於單桌 .free-del-btn，避免被攔截）
+                if (e.target.closest('.free-zone-del')) {
+                    const btn = e.target.closest('.free-zone-del');
+                    this.state.freeZones = (this.state.freeZones || []).filter(item => item.id !== btn.dataset.zoneId);
+                    this.renderSeatingChart();
+                    this.commitState(true);
+                    this.showToast('已刪除空間區', 'info', 1400);
+                    return;
+                }
+                if (e.target.closest('.free-zone-rot-left') || e.target.closest('.free-zone-rot-right')) {
+                    const btn = e.target.closest('.free-zone-rot-left, .free-zone-rot-right');
+                    const z = (this.state.freeZones || []).find(item => item.id === btn.dataset.zoneId);
+                    if (z) {
+                        const delta = btn.classList.contains('free-zone-rot-right') ? 15 : -15;
+                        let next = ((z.angle || 0) + delta) % 360;
+                        if (next > 180) next -= 360;
+                        if (next <= -180) next += 360;
+                        z.angle = next;
+                        this.renderSeatingChart();
+                        this.commitState(true);
+                    }
+                    return;
+                }
+                if (e.target.closest('.free-space-label')) {
+                    const span = e.target.closest('.free-space-label');
+                    const input = span.nextElementSibling;
+                    span.classList.add('editing');
+                    input.classList.add('editing');
+                    input.focus();
+                    input.select();
+                    return;
+                }
+
                 // 自由畫布：旋轉與刪除桌子按鈕
                 if (e.target.closest('.free-rot-left')) {
                     const btn = e.target.closest('.free-rot-left');
@@ -3876,13 +5118,17 @@
                     return;
                 }
 
-                // 分組：旋轉小組角度
-                if (e.target.closest('.group-rotate-btn')) {
-                    const container = e.target.closest('.group-container');
+                // 分組：雙向旋轉小組角度（左轉 -15° / 右轉 +15°）
+                if (e.target.closest('.group-rot-left') || e.target.closest('.group-rot-right')) {
+                    const btn = e.target.closest('.group-rot-left, .group-rot-right');
+                    const container = btn.closest('.group-container');
                     const group = this.state.groups.find(g => g.id === (container && container.dataset.groupKey));
                     if (group) {
-                        const currIdx = this.GROUP_ANGLES.indexOf(group.angle || 0);
-                        group.angle = this.GROUP_ANGLES[(currIdx + 1) % this.GROUP_ANGLES.length];
+                        const delta = btn.classList.contains('group-rot-right') ? 15 : -15;
+                        let next = ((group.angle || 0) + delta) % 360;
+                        if (next > 180) next -= 360;
+                        if (next <= -180) next += 360;
+                        group.angle = next;
                         this.renderSeatingChart();
                         this.commitState(true);
                         this.showToast(`「${group.name}」角度已調整為 ${group.angle}°`, 'info', 1400);
@@ -4191,7 +5437,7 @@
                 try {
                     const data = this.buildSerializableData();
                     if (this.classStore.activeClassId && this.classStore.classes[this.classStore.activeClassId]) {
-                        this.classStore.classes[this.classStore.activeClassId].label = this.state.className || '未命名班級';
+                        this.classStore.classes[this.classStore.activeClassId].label = this.state.className || '神來一班';
                         this.classStore.classes[this.classStore.activeClassId].data = data;
                     }
                     localStorage.setItem(this.MULTI_STORAGE_KEY, JSON.stringify(this.classStore));
@@ -4221,13 +5467,23 @@
                     waitingBench: Array.isArray(s.waitingBench) ? s.waitingBench : [],
                     students: Array.isArray(s.students) ? s.students : [],
                     groups: Array.isArray(s.groups) ? s.groups : [],
-                    freeDesks: Array.isArray(s.freeDesks) ? s.freeDesks : []
+                    freeDesks: Array.isArray(s.freeDesks) ? s.freeDesks : [],
+                    freeGroups: Array.isArray(s.freeGroups) ? s.freeGroups : [],
+                    freeZones: Array.isArray(s.freeZones) ? s.freeZones : []
                 };
                 delete this.state.groupNames;
 
                 this.ensureGroupsInitialized(legacyGroupNames);
-                if (this.state.seatingMode === 'freeform') this.ensureFreeDesksInitialized();
-                else this.syncNextFreeDeskId();
+                if (this.state.seatingMode === 'freeform') {
+                    this.ensureFreeDesksInitialized();
+                    // 重整或讀取自由畫布存檔時，自動開啟編排模式，確保進入即可直接框選與拖曳
+                    this.isFreeformEditMode = true;
+                    this.elements.freeformModeBanner.classList.remove('hidden');
+                    this.elements.toggleFreeformEditBtn.classList.add('bg-purple-800');
+                    this.elements.toggleFreeformEditBtn.innerHTML = '<i class="fas fa-check mr-1"></i>切回安排學生';
+                } else {
+                    this.syncNextFreeDeskId();
+                }
                 if (data && typeof data.studentText === 'string') this.elements.studentsTextarea.value = data.studentText;
                 this.elements.classNameInput.value = this.state.className || '';
                 this.updateClassName();
@@ -4331,18 +5587,26 @@
                 const isTrad = this.state.seatingMode === 'traditional';
                 const isGroup = this.state.seatingMode === 'group';
                 const isFree = this.state.seatingMode === 'freeform';
+                const hasFreeGroups = isFree && Array.isArray(this.state.freeGroups) && this.state.freeGroups.length > 0;
                 this.elements.traditionalInputsDiv.classList.toggle('hidden', !isTrad);
                 this.elements.groupInputsDiv.classList.toggle('hidden', !isGroup);
                 this.elements.freeformInputsDiv.classList.toggle('hidden', !isFree);
                 this.elements.rotateSection.classList.toggle('hidden', !isTrad);
                 this.elements.groupRotateSection.classList.toggle('hidden', !isGroup);
-                this.elements.randomGroupPickerBtn.classList.toggle('hidden', !isGroup);
-                this.elements.resetScoresWrap.classList.toggle('hidden', !isGroup || !this.state.showGroupScores);
+                this.elements.randomGroupPickerBtn.classList.toggle('hidden', !(isGroup || hasFreeGroups));
+                this.elements.resetScoresWrap.classList.toggle('hidden', !(isGroup || hasFreeGroups) || !this.state.showGroupScores);
                 if (!isFree) {
                     this.isFreeformEditMode = false;
                     this.selectedFreeDeskIds.clear();
                     this.elements.freeformModeBanner.classList.add('hidden');
                     this.elements.freeformBatchBar.classList.add('hidden');
+                }
+                const isGroupFree = isGroup && (this.state.groupsPerRow || 'free') === 'free';
+                if (this.elements.groupFreeCanvasBar) {
+                    this.elements.groupFreeCanvasBar.classList.toggle('hidden', !isGroupFree);
+                }
+                if (this.elements.groupFreeCanvasBanner) {
+                    this.elements.groupFreeCanvasBanner.classList.toggle('hidden', !isGroupFree);
                 }
             }
 
@@ -4397,7 +5661,17 @@
                 this.updateConditionalInputs();
                 this.state.layoutMap.clear();
                 this.state.lockedDeskIds.clear();
-                if (mode === 'group') this.ensureGroupsInitialized();
+                if (mode === 'group') {
+                    this.ensureGroupsInitialized();
+                    if (!this.state.groupsPerRow || this.state.groupsPerRow === 'auto') {
+                        this.state.groupsPerRow = 'free';
+                        this.elements.groupsPerRowSelect.value = 'free';
+                    }
+                    if (this.state.groupsPerRow === 'free') {
+                        this.ensureGroupFreeCoords();
+                    }
+                    this.updateConditionalInputs();
+                }
                 if (mode === 'freeform') {
                     this.ensureFreeDesksInitialized();
                     this.isFreeformEditMode = true;
@@ -4491,6 +5765,247 @@
                 this.renderSeatingChart();
             }
 
+            handleGroupHeaderTransferDrop(e, targetGroupId) {
+                let sourceData;
+                try {
+                    const raw = e.dataTransfer.getData('text/plain');
+                    if (!raw) return;
+                    sourceData = JSON.parse(raw);
+                } catch (_) { return; }
+
+                const targetGroup = this.state.groups.find(g => g.id === targetGroupId);
+                if (!targetGroup) return;
+
+                let student = null;
+                let sourceGroupId = null;
+                let sourceDeskIdx = -1;
+
+                if (sourceData.type === 'bench') {
+                    student = this.state.waitingBench.find(s => s.id === sourceData.id);
+                } else if (sourceData.type === 'desk') {
+                    if (this.state.lockedDeskIds.has(sourceData.id)) {
+                        this.showToast('此座位已鎖定，無法轉組', 'warning');
+                        return;
+                    }
+                    student = this.state.layoutMap.get(sourceData.id);
+                    const m = /^(g\d+)d(\d+)$/.exec(sourceData.id);
+                    if (m) {
+                        sourceGroupId = m[1];
+                        sourceDeskIdx = parseInt(m[2], 10);
+                    }
+                }
+                if (!student) return;
+                if (sourceGroupId === targetGroupId) return;
+
+                // 找目標組第一個空位；若已滿員則自動新增一格（上限 12）
+                let targetSlotId = null;
+                for (let d = 0; d < targetGroup.seatCount; d++) {
+                    const cid = `${targetGroup.id}d${d}`;
+                    if (!this.state.layoutMap.has(cid)) { targetSlotId = cid; break; }
+                }
+                if (!targetSlotId) {
+                    if (targetGroup.seatCount >= 12) {
+                        this.showToast(`「${targetGroup.name}」已達每組上限 12 人`, 'warning');
+                        return;
+                    }
+                    targetSlotId = `${targetGroup.id}d${targetGroup.seatCount}`;
+                    targetGroup.seatCount++;
+                }
+
+                // 移入目標組
+                this.state.layoutMap.set(targetSlotId, student);
+
+                // 清理來源（暫存區或原小組自動縮減該空位）
+                if (sourceData.type === 'bench') {
+                    this.state.waitingBench = this.state.waitingBench.filter(s => s.id !== student.id);
+                } else if (sourceGroupId && sourceDeskIdx >= 0) {
+                    const srcGroup = this.state.groups.find(g => g.id === sourceGroupId);
+                    this.state.layoutMap.delete(sourceData.id);
+                    if (srcGroup && srcGroup.seatCount > 1) {
+                        for (let d = sourceDeskIdx + 1; d < srcGroup.seatCount; d++) {
+                            const fromId = `${sourceGroupId}d${d}`;
+                            const toId = `${sourceGroupId}d${d - 1}`;
+                            if (this.state.layoutMap.has(fromId)) {
+                                this.state.layoutMap.set(toId, this.state.layoutMap.get(fromId));
+                                this.state.layoutMap.delete(fromId);
+                            }
+                            if (this.state.lockedDeskIds.has(fromId)) {
+                                this.state.lockedDeskIds.add(toId);
+                                this.state.lockedDeskIds.delete(fromId);
+                            }
+                        }
+                        srcGroup.seatCount--;
+                    }
+                }
+
+                this.renderSeatingChart();
+                this.renderWaitingBench();
+                this.commitState(true);
+                this.showToast(`已將「${student.name}」轉入「${targetGroup.name}」`, 'success', 1800);
+            }
+
+            // 以實際學生人數自動均分（byGroups: 依設定組數均分全員；bySize: 依設定每組人數自動算組數均分）
+            autoBalanceGroups(mode = 'byGroups') {
+                if (this.state.seatingMode !== 'group') return;
+                const textStudents = this.parseStudents(this.elements.studentsTextarea.value);
+                this.state.students = textStudents;
+                const totalN = textStudents.length;
+                if (totalN === 0) {
+                    this.showToast('請先輸入學生名單再執行自動均分', 'warning');
+                    return;
+                }
+
+                this.ensureGroupsInitialized();
+                let targetNumGroups;
+                if (mode === 'byGroups') {
+                    targetNumGroups = this.clampInt(this.elements.numGroupsInput.value, 1, 25, this.state.groups.length || 5);
+                    targetNumGroups = Math.min(targetNumGroups, totalN);
+                } else {
+                    const desiredSize = this.clampInt(this.elements.studentsPerGroupInput.value, 1, 12, this.state.studentsPerGroup || 4);
+                    targetNumGroups = Math.max(1, Math.min(25, Math.ceil(totalN / desiredSize)));
+                }
+
+                // 計算各組均分人數（例如 27 人分 6 組 -> [5, 5, 5, 4, 4, 4]）
+                const baseSize = Math.floor(totalN / targetNumGroups);
+                const remainder = totalN % targetNumGroups;
+
+                while (this.state.groups.length < targetNumGroups) {
+                    const gIdx = this.nextGroupId++;
+                    this.state.groups.push({
+                        id: `g${gIdx}`,
+                        name: `第 ${this.state.groups.length + 1} 組`,
+                        seatCount: baseSize,
+                        cols: this.state.defaultGroupCols || '2',
+                        colorIdx: this.state.groups.length % this.GROUP_COLORS.length,
+                        score: 0,
+                        angle: 0
+                    });
+                }
+                if (this.state.groups.length > targetNumGroups) {
+                    const removed = this.state.groups.splice(targetNumGroups);
+                    removed.forEach(rm => {
+                        Array.from(this.state.layoutMap.keys()).forEach(k => {
+                            if (k.startsWith(`${rm.id}d`)) {
+                                this.state.layoutMap.delete(k);
+                                this.state.lockedDeskIds.delete(k);
+                            }
+                        });
+                    });
+                }
+
+                this.state.groups.forEach((g, idx) => {
+                    g.seatCount = baseSize + (idx < remainder ? 1 : 0);
+                });
+                this.state.numGroups = this.state.groups.length;
+                this.state.studentsPerGroup = Math.max(1, Math.min(12, baseSize + (remainder > 0 ? 1 : 0)));
+                this.elements.numGroupsInput.value = this.state.numGroups;
+                this.elements.studentsPerGroupInput.value = this.state.studentsPerGroup;
+
+                if (this.state.groupsPerRow === 'free') this.ensureGroupFreeCoords();
+
+                this.arrangeSeats(false);
+                this.commitState(true);
+                const summary = remainder === 0
+                    ? `共 ${targetNumGroups} 組，每組 ${baseSize} 人`
+                    : `共 ${targetNumGroups} 組（${remainder} 組 ${baseSize + 1} 人、${targetNumGroups - remainder} 組 ${baseSize} 人）`;
+                this.showToast(`已自動均分 ${totalN} 位學生：${summary}`, 'success', 2600);
+            }
+
+            // 一鍵將分組模式完整轉換至自由畫布（保留所有組名、代表色、積分、旋轉角度、桌型與學生）
+            convertGroupsToFreeform() {
+                if (this.state.seatingMode !== 'group') return;
+                this.ensureGroupsInitialized();
+                if (this.state.groups.length === 0) {
+                    this.showToast('目前沒有可轉換的小組', 'warning');
+                    return;
+                }
+
+                const newFreeDesks = [];
+                const newFreeGroups = [];
+                const newLayoutMap = new Map();
+                const newLockedIds = new Set();
+
+                const isAlreadyFree = this.state.groupsPerRow === 'free';
+                const colsPerRow = this.state.groupsPerRow === 'auto' || isAlreadyFree
+                    ? Math.min(3, Math.max(2, Math.ceil(Math.sqrt(this.state.groups.length))))
+                    : Math.max(1, parseInt(this.state.groupsPerRow, 10) || 2);
+
+                const deskStepX = 118;
+                const deskStepY = 94;
+
+                this.state.groups.forEach((group, gIdx) => {
+                    const fgId = `fg${gIdx}`;
+                    const gAngle = group.angle || 0;
+                    newFreeGroups.push({
+                        id: fgId,
+                        name: group.name,
+                        colorIdx: group.colorIdx || (gIdx % this.GROUP_COLORS.length),
+                        score: group.score || 0,
+                        angle: gAngle
+                    });
+
+                    const colCnt = group.cols === 'row' ? Math.max(1, group.seatCount) : Math.max(1, parseInt(group.cols, 10) || 2);
+                    const rowCnt = Math.max(1, Math.ceil(group.seatCount / colCnt));
+                    const originX = (isAlreadyFree && typeof group.x === 'number') ? group.x + 20 : 56 + (gIdx % colsPerRow) * 320;
+                    const originY = (isAlreadyFree && typeof group.y === 'number') ? group.y + 48 : 72 + Math.floor(gIdx / colsPerRow) * 290;
+
+                    // 先建立 0° 局部座標，若有組旋轉角度則繞該組中心旋轉
+                    const localDesks = [];
+                    for (let d = 0; d < group.seatCount; d++) {
+                        const r = Math.floor(d / colCnt);
+                        const c = d % colCnt;
+                        localDesks.push({
+                            oldDeskId: `${group.id}d${d}`,
+                            x: originX + c * deskStepX,
+                            y: originY + r * deskStepY
+                        });
+                    }
+                    const cx = localDesks.reduce((s, o) => s + o.x, 0) / Math.max(1, localDesks.length);
+                    const cy = localDesks.reduce((s, o) => s + o.y, 0) / Math.max(1, localDesks.length);
+                    const rad = (gAngle * Math.PI) / 180;
+                    const cos = Math.cos(rad), sin = Math.sin(rad);
+
+                    localDesks.forEach(item => {
+                        const fId = `f${newFreeDesks.length}`;
+                        let fx = item.x, fy = item.y;
+                        if (gAngle) {
+                            const rx = item.x - cx, ry = item.y - cy;
+                            fx = Math.max(20, Math.round(cx + rx * cos - ry * sin));
+                            fy = Math.max(48, Math.round(cy + rx * sin + ry * cos));
+                        }
+                        newFreeDesks.push({ id: fId, x: fx, y: fy, angle: gAngle, groupId: fgId });
+
+                        if (this.state.layoutMap.has(item.oldDeskId)) {
+                            newLayoutMap.set(fId, this.state.layoutMap.get(item.oldDeskId));
+                        }
+                        if (this.state.lockedDeskIds.has(item.oldDeskId)) {
+                            newLockedIds.add(fId);
+                        }
+                    });
+                });
+
+                this.state.freeDesks = newFreeDesks;
+                this.state.freeGroups = newFreeGroups;
+                this.state.layoutMap = newLayoutMap;
+                this.state.lockedDeskIds = newLockedIds;
+                this.state.seatingMode = 'freeform';
+                this.syncNextFreeDeskId();
+
+                const freeRadio = document.querySelector('input[name="seatingMode"][value="freeform"]');
+                if (freeRadio) freeRadio.checked = true;
+
+                this.isFreeformEditMode = true;
+                this.elements.freeformModeBanner.classList.remove('hidden');
+                this.elements.toggleFreeformEditBtn.classList.add('bg-purple-800');
+                this.elements.toggleFreeformEditBtn.innerHTML = '<i class="fas fa-check mr-1"></i>切回安排學生';
+
+                this.updateConditionalInputs();
+                this.renderSeatingChart();
+                this.renderWaitingBench();
+                this.commitState(true);
+                this.showToast(`已將 ${newFreeGroups.length} 個小組完整轉入自由畫布，可直接拖曳微調與新增走道！`, 'success', 2800);
+            }
+
             addNewGroup() {
                 if (this.state.seatingMode !== 'group') return;
                 this.ensureGroupsInitialized();
@@ -4516,6 +6031,7 @@
                 if (!group) return;
                 if (group.seatCount >= 12) { this.showToast('每組最多 12 個座位', 'warning'); return; }
                 group.seatCount++;
+
                 this.renderSeatingChart();
                 this.commitState(true);
             }
@@ -4597,45 +6113,316 @@
             }
 
             // ============================================================
-            // 匯出圖片、視覺格子版 Word 與 Excel
+            // 高精度向量 SVG 引擎、無裁切 PNG 匯出、Word 匯出與 Excel
             // ============================================================
+            buildSeatingSvgData(options = {}) {
+                const { includeTitle = true } = options;
+                const chart = this.elements.seatingChart;
+                const chartRect = chart.getBoundingClientRect();
+                const contentW = Math.max(400, Math.ceil(chart.scrollWidth || chartRect.width));
+                const contentH = Math.max(260, Math.ceil(chart.scrollHeight || chartRect.height));
+
+                const hasSideMarkers = this.state.sideMarkers !== 'none';
+                const sidePad = hasSideMarkers ? 48 : 24;
+                const topHeaderH = includeTitle ? 72 : 16;
+                const bbH = this.state.showBlackboard ? 48 : 0;
+                const tdH = this.state.showTeacherDesk ? 40 : 0;
+                const frontBlockH = bbH + tdH;
+                const isTeacherTop = this.state.viewPerspective === 'teacher';
+
+                const topOffset = topHeaderH + (isTeacherTop ? frontBlockH : 0) + 12;
+                const bottomOffset = (!isTeacherTop ? frontBlockH : 0) + 28;
+                const svgW = Math.ceil(contentW + sidePad * 2);
+                const svgH = Math.ceil(topOffset + contentH + bottomOffset);
+
+                const esc = (s) => this.escapeHtml(s);
+                const fontFamily = "'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif";
+                const parts = [];
+
+                parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">`);
+                parts.push(`<rect x="0" y="0" width="${svgW}" height="${svgH}" fill="#ffffff"/>`);
+
+                // 標題與視角資訊
+                if (includeTitle) {
+                    const titleText = this.state.className || '神來一班';
+                    const perspText = isTeacherTop ? '黑板在上（俯視）' : '黑板在下（講臺視角）';
+                    parts.push(`<text x="${svgW / 2}" y="34" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="24" font-weight="700" fill="#1e293b">${esc(titleText)}</text>`);
+                    parts.push(`<text x="${svgW / 2}" y="60" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="12" fill="#64748b">${esc(perspText)}</text>`);
+                }
+
+                // 繪製黑板與講桌
+                const drawFrontObjects = (startY, reversed) => {
+                    let y = startY;
+                    const items = reversed ? ['td', 'bb'] : ['bb', 'td'];
+                    items.forEach(item => {
+                        if (item === 'bb' && this.state.showBlackboard) {
+                            const w = Math.min(420, Math.round(contentW * 0.65));
+                            const x = Math.round((svgW - w) / 2);
+                            parts.push(`<rect x="${x}" y="${y}" width="${w}" height="36" rx="6" fill="#44403c" stroke="#292524" stroke-width="2"/>`);
+                            parts.push(`<text x="${svgW / 2}" y="${y + 18}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="14" font-weight="700" fill="#ffffff" letter-spacing="4">黑板</text>`);
+                            y += 46;
+                        }
+                        if (item === 'td' && this.state.showTeacherDesk) {
+                            const w = 104;
+                            const x = Math.round((svgW - w) / 2);
+                            parts.push(`<rect x="${x}" y="${y}" width="${w}" height="30" rx="6" fill="#7c3aed" stroke="#5b21b6" stroke-width="2"/>`);
+                            parts.push(`<text x="${svgW / 2}" y="${y + 15}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="13" font-weight="700" fill="#ffffff">講桌</text>`);
+                            y += 38;
+                        }
+                    });
+                };
+
+                if (isTeacherTop) drawFrontObjects(topHeaderH + 4, false);
+                else drawFrontObjects(topOffset + contentH + 10, true);
+
+                // 繪製左右門窗標示
+                if (hasSideMarkers) {
+                    const isFlipped = !isTeacherTop;
+                    const doorOnLeft = isFlipped ? this.state.sideMarkers === 'door-right' : this.state.sideMarkers === 'door-left';
+                    const frontDoor = isFlipped ? '後門' : '前門';
+                    const backDoor = isFlipped ? '前門' : '後門';
+                    const drawSideBadge = (cx, cy, text, isDoor) => {
+                        const fill = isDoor ? '#fef3c7' : '#e0f2fe';
+                        const stroke = isDoor ? '#f59e0b' : '#38bdf8';
+                        const color = isDoor ? '#92400e' : '#075985';
+                        parts.push(`<rect x="${cx - 13}" y="${cy - 26}" width="26" height="52" rx="5" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`);
+                        parts.push(`<text x="${cx}" y="${cy - 8}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="11" font-weight="700" fill="${color}">${esc(text[0])}</text>`);
+                        parts.push(`<text x="${cx}" y="${cy + 10}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="11" font-weight="700" fill="${color}">${esc(text[1] || '')}</text>`);
+                    };
+                    const leftX = 22;
+                    const rightX = svgW - 22;
+                    const topY = topOffset + 42;
+                    const botY = topOffset + Math.max(120, contentH - 42);
+                    if (doorOnLeft) {
+                        drawSideBadge(leftX, topY, frontDoor, true);
+                        drawSideBadge(leftX, botY, backDoor, true);
+                        drawSideBadge(rightX, topY, '靠窗', false);
+                        drawSideBadge(rightX, botY, '靠窗', false);
+                    } else {
+                        drawSideBadge(leftX, topY, '靠窗', false);
+                        drawSideBadge(leftX, botY, '靠窗', false);
+                        drawSideBadge(rightX, topY, frontDoor, true);
+                        drawSideBadge(rightX, botY, backDoor, true);
+                    }
+                }
+
+                // 座標轉換輔助：取得相對於 SVG 畫布的未旋轉外框與中心
+                const getBox = (el) => {
+                    const r = el.getBoundingClientRect();
+                    const cx = (r.left - chartRect.left) + r.width / 2 + sidePad;
+                    const cy = (r.top - chartRect.top) + r.height / 2 + topOffset;
+                    const w = el.offsetWidth || r.width;
+                    const h = el.offsetHeight || r.height;
+                    return { cx, cy, w, h, x: cx - w / 2, y: cy - h / 2 };
+                };
+
+                // 分組模式先繪製小組外框、組名與積分
+                const groupAngleMap = new Map();
+                if (this.state.seatingMode === 'group') {
+                    chart.querySelectorAll('.group-container').forEach(gEl => {
+                        if (gEl.classList.contains('all-empty') && !this.state.showEmptySeats) return;
+                        const gKey = gEl.dataset.groupKey;
+                        const group = this.state.groups.find(g => g.id === gKey);
+                        if (!group) return;
+                        const angle = group.angle || 0;
+                        groupAngleMap.set(gKey, angle);
+                        const colorObj = this.GROUP_COLORS[(group.colorIdx || 0) % this.GROUP_COLORS.length];
+                        const box = getBox(gEl);
+                        const rot = angle ? ` transform="rotate(${angle} ${box.cx.toFixed(1)} ${box.cy.toFixed(1)})"` : '';
+
+                        parts.push(`<g${rot}>`);
+                        parts.push(`<rect x="${box.x.toFixed(1)}" y="${box.y.toFixed(1)}" width="${box.w.toFixed(1)}" height="${box.h.toFixed(1)}" rx="10" fill="${colorObj.bg}" stroke="${colorObj.border}" stroke-width="2"/>`);
+                        if (this.state.showGroupNames) {
+                            const scoreSuffix = this.state.showGroupScores ? ` (${group.score || 0}分)` : '';
+                            parts.push(`<text x="${(box.x + 12).toFixed(1)}" y="${(box.y + 18).toFixed(1)}" text-anchor="start" dominant-baseline="central" font-family="${fontFamily}" font-size="12" font-weight="700" fill="#334155">${esc(group.name + scoreSuffix)}</text>`);
+                        }
+                        parts.push(`</g>`);
+                    });
+                } else if (this.state.seatingMode === 'freeform') {
+                    // 自由畫布已綁定分組底框與組名（同步套用外框旋轉角度）
+                    chart.querySelectorAll('.free-group-zone').forEach(zEl => {
+                        const fgId = zEl.dataset.freeGroupId;
+                        const fg = (this.state.freeGroups || []).find(g => g.id === fgId);
+                        if (!fg) return;
+                        const colorObj = this.GROUP_COLORS[(fg.colorIdx || 0) % this.GROUP_COLORS.length];
+                        const box = getBox(zEl);
+                        const angle = parseFloat(zEl.style.getPropertyValue('--item-rotate')) || 0;
+                        const rotAttr = angle ? ` transform="rotate(${angle} ${box.cx.toFixed(1)} ${box.cy.toFixed(1)})"` : '';
+                        parts.push(`<g${rotAttr}>`);
+                        parts.push(`<rect x="${box.x.toFixed(1)}" y="${box.y.toFixed(1)}" width="${box.w.toFixed(1)}" height="${box.h.toFixed(1)}" rx="12" fill="${colorObj.bg}" stroke="${colorObj.border}" stroke-width="2" stroke-dasharray="6,4"/>`);
+                        if (this.state.showGroupNames) {
+                            const scoreSuffix = this.state.showGroupScores ? ` (${fg.score || 0}分)` : '';
+                            parts.push(`<text x="${(box.x + 12).toFixed(1)}" y="${(box.y + 18).toFixed(1)}" text-anchor="start" dominant-baseline="central" font-family="${fontFamily}" font-size="12" font-weight="700" fill="#334155">${esc(fg.name + scoreSuffix)}</text>`);
+                        }
+                        parts.push(`</g>`);
+                    });
+                }
+
+                // 自訂空間區 / 走道（自由畫布與分組自由畫布皆支援匯出）
+                chart.querySelectorAll('.free-space-zone').forEach(sEl => {
+                    const zId = sEl.dataset.zoneId;
+                    const z = (this.state.freeZones || []).find(item => item.id === zId);
+                    if (!z) return;
+                    const box = getBox(sEl);
+                    const angle = parseFloat(sEl.style.getPropertyValue('--item-rotate')) || 0;
+                    const rotAttr = angle ? ` transform="rotate(${angle} ${box.cx.toFixed(1)} ${box.cy.toFixed(1)})"` : '';
+                    parts.push(`<g${rotAttr}>`);
+                    parts.push(`<rect x="${box.x.toFixed(1)}" y="${box.y.toFixed(1)}" width="${box.w.toFixed(1)}" height="${box.h.toFixed(1)}" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="6,4"/>`);
+                    parts.push(`<text x="${box.cx.toFixed(1)}" y="${box.cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="12" font-weight="700" fill="#475569">${esc(z.label || '走道 / 空間區')}</text>`);
+                    parts.push(`</g>`);
+                });
+
+                // 繪製每一張桌子（原生向量文字，絕不裁切下半部）
+                chart.querySelectorAll('.desk').forEach(deskEl => {
+                    const deskId = deskEl.dataset.deskId;
+                    if (!deskId) return;
+                    if (deskEl.classList.contains('is-disabled')) return;
+                    const student = this.state.layoutMap.get(deskId);
+                    if (!student && !this.state.showEmptySeats) return;
+
+                    // 若在隱藏全空小組內則跳過
+                    const parentGroupEl = deskEl.closest('.group-container');
+                    if (parentGroupEl && parentGroupEl.classList.contains('all-empty') && !this.state.showEmptySeats) return;
+
+                    const box = getBox(deskEl);
+                    let angle = 0;
+                    if (this.state.seatingMode === 'freeform') {
+                        const rawRot = deskEl.style.getPropertyValue('--item-rotate') || '0deg';
+                        angle = parseFloat(rawRot) || 0;
+                    } else if (parentGroupEl) {
+                        angle = groupAngleMap.get(parentGroupEl.dataset.groupKey) || 0;
+                    }
+
+                    const rotAttr = angle ? ` transform="rotate(${angle} ${box.cx.toFixed(1)} ${box.cy.toFixed(1)})"` : '';
+                    let fill = '#ffffff';
+                    let border = '#cbd5e1';
+                    let leftAccentColor = null;
+                    let leftAccentDash = false;
+
+                    if (!student) {
+                        fill = '#f8fafc';
+                        border = '#e2e8f0';
+                    } else if (this.state.showGenderColor) {
+                        if (student.gender === '男') { fill = '#f0f9ff'; border = '#93c5fd'; leftAccentColor = '#60a5fa'; }
+                        else if (student.gender === '女') { fill = '#fdf4ff'; border = '#f9a8d4'; leftAccentColor = '#f472b6'; leftAccentDash = true; }
+                    }
+
+                    parts.push(`<g${rotAttr}>`);
+                    parts.push(`<rect x="${box.x.toFixed(1)}" y="${box.y.toFixed(1)}" width="${box.w.toFixed(1)}" height="${box.h.toFixed(1)}" rx="7" fill="${fill}" stroke="${border}" stroke-width="1.2"/>`);
+                    if (leftAccentColor) {
+                        const dashAttr = leftAccentDash ? ' stroke-dasharray="5,3"' : '';
+                        parts.push(`<line x1="${(box.x + 2).toFixed(1)}" y1="${(box.y + 4).toFixed(1)}" x2="${(box.x + 2).toFixed(1)}" y2="${(box.y + box.h - 4).toFixed(1)}" stroke="${leftAccentColor}" stroke-width="4" stroke-linecap="round"${dashAttr}/>`);
+                    }
+
+                    if (!student) {
+                        parts.push(`<text x="${box.cx.toFixed(1)}" y="${box.cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="12" fill="#94a3b8">空位</text>`);
+                    } else {
+                        const displayName = this.state.showAnonymous ? this.anonymizeName(student.name) : student.name;
+                        const role = this.state.studentRoles[student.id] || '';
+                        const genderMark = this.state.showGenderSymbol
+                            ? (student.gender === '男' ? ' ♂' : student.gender === '女' ? ' ♀' : '')
+                            : '';
+                        const mainText = `${student.number} ${displayName}${genderMark}`;
+                        const needsText = (this.state.showNeeds && student.needs) ? student.needs : '';
+
+                        // 職務標籤（組長等）
+                        if (role) {
+                            const badgeFill = role === '組長' ? '#fef3c7' : '#ede9fe';
+                            const badgeStroke = role === '組長' ? '#f59e0b' : '#c4b5fd';
+                            const badgeColor = role === '組長' ? '#b45309' : '#6d28d9';
+                            const bw = Math.max(30, role.length * 11 + 10);
+                            parts.push(`<rect x="${(box.x + 6).toFixed(1)}" y="${(box.y + 5).toFixed(1)}" width="${bw}" height="15" rx="3" fill="${badgeFill}" stroke="${badgeStroke}" stroke-width="0.8"/>`);
+                            parts.push(`<text x="${(box.x + 6 + bw / 2).toFixed(1)}" y="${(box.y + 12.5).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="9.5" font-weight="700" fill="${badgeColor}">${esc(role)}</text>`);
+                        }
+
+                        // 依文字長度自動微調字級，確保姓名絕不超出桌寬也絕不被裁切
+                        const maxFontSize = Math.max(11, Math.min(15, 14 * (this.state.zoomScale / 100)));
+                        const estCharWidth = mainText.length > 7 ? (box.w - 14) / (mainText.length * 0.92) : maxFontSize;
+                        const mainFontSize = Math.max(10, Math.min(maxFontSize, estCharWidth));
+
+                        const mainY = needsText ? (box.cy - (role ? 2 : 8)) : (box.cy + (role ? 5 : 0));
+                        parts.push(`<text x="${box.cx.toFixed(1)}" y="${mainY.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="${mainFontSize.toFixed(1)}" font-weight="700" fill="#1f2937">${esc(mainText)}</text>`);
+
+                        // 需求備註（超長自動切 2 行）
+                        if (needsText) {
+                            const maxCharsPerLine = Math.max(6, Math.floor((box.w - 14) / 10));
+                            const line1 = needsText.slice(0, maxCharsPerLine);
+                            const line2 = needsText.length > maxCharsPerLine ? needsText.slice(maxCharsPerLine, maxCharsPerLine * 2) : '';
+                            const needsY1 = mainY + 18;
+                            parts.push(`<text x="${box.cx.toFixed(1)}" y="${needsY1.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="10" fill="#475569">${esc(line1)}</text>`);
+                            if (line2) {
+                                parts.push(`<text x="${box.cx.toFixed(1)}" y="${(needsY1 + 13).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-family="${fontFamily}" font-size="10" fill="#475569">${esc(line2)}</text>`);
+                            }
+                        }
+                    }
+                    parts.push(`</g>`);
+                });
+
+                parts.push(`</svg>`);
+                return { svgString: parts.join('\n'), width: svgW, height: svgH };
+            }
+
+            // 將向量 SVG 渲染為高解析度 PNG Blob（零文字裁切、支援全旋轉角度）
+            renderSvgToPngBlob(svgString, width, height, scale = 2) {
+                return new Promise((resolve, reject) => {
+                    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(svgBlob);
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = Math.ceil(width * scale);
+                            canvas.height = Math.ceil(height * scale);
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.scale(scale, scale);
+                            ctx.drawImage(img, 0, 0, width, height);
+                            URL.revokeObjectURL(url);
+                            canvas.toBlob((blob) => {
+                                if (!blob) reject(new Error('PNG 轉換失敗'));
+                                else resolve(blob);
+                            }, 'image/png');
+                        } catch (e) {
+                            URL.revokeObjectURL(url);
+                            reject(e);
+                        }
+                    };
+                    img.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        reject(new Error('SVG 影像載入失敗'));
+                    };
+                    img.src = url;
+                });
+            }
+
+            exportLayoutSvg() {
+                try {
+                    const { svgString } = this.buildSeatingSvgData({ includeTitle: true });
+                    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                    saveAs(blob, `${this.state.className || '神來一班'}_座位表.svg`);
+                    this.showToast('SVG 向量圖檔匯出成功！', 'success');
+                } catch (err) {
+                    console.error('SVG export failed', err);
+                    this.showToast('匯出 SVG 失敗，請重試', 'error');
+                }
+            }
+
             async exportLayoutImage() {
-                if (typeof html2canvas === 'undefined') { this.showToast('圖片匯出元件未載入', 'error'); return; }
                 const btn = this.elements.exportImageBtn;
                 const originalHtml = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>匯出中';
 
-                const layoutDiv = this.elements.classroomLayout;
-                this.elements.classInfo.style.display = 'none';
-                this.elements.printClassName.textContent = this.state.className || '座位表';
-                this.elements.printClassName.classList.remove('hidden');
-                this.elements.webClassName.style.display = 'none';
-                layoutDiv.classList.add('exporting-mode');
-
                 try {
-                    const canvas = await html2canvas(layoutDiv, {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#ffffff',
-                        ignoreElements: (node) => node.classList && node.classList.contains('no-print')
-                    });
-                    await new Promise((resolve, reject) => {
-                        canvas.toBlob((blob) => {
-                            if (!blob) { reject(new Error('Blob 產生失敗')); return; }
-                            saveAs(blob, `${this.state.className || '座位表'}.png`);
-                            resolve();
-                        });
-                    });
-                    this.showToast('圖片匯出成功！', 'success');
+                    const { svgString, width, height } = this.buildSeatingSvgData({ includeTitle: true });
+                    const pngBlob = await this.renderSvgToPngBlob(svgString, width, height, 2);
+                    saveAs(pngBlob, `${this.state.className || '神來一班'}_座位表.png`);
+                    this.showToast('高畫質 PNG 圖片匯出成功！', 'success');
                 } catch (err) {
-                    console.error('Export failed', err);
+                    console.error('PNG export failed', err);
                     this.showToast('匯出圖片失敗，請重試', 'error');
                 } finally {
-                    layoutDiv.classList.remove('exporting-mode');
-                    this.elements.classInfo.style.display = '';
-                    this.elements.printClassName.classList.add('hidden');
-                    this.elements.webClassName.style.display = '';
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;
                 }
@@ -4649,24 +6436,24 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>匯出中';
 
                 try {
-                    const { Document, Packer, Paragraph, TextRun, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, ShadingType, BorderStyle } = docx;
+                    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, ShadingType, BorderStyle } = docx;
 
                     const perspectiveLabel = this.state.viewPerspective === 'teacher' ? '黑板在上（俯視）' : '黑板在下（講臺視角）';
                     let sideHint = '';
                     if (this.state.sideMarkers !== 'none') {
                         const isFlipped = this.state.viewPerspective === 'student';
                         const doorOnLeft = isFlipped ? this.state.sideMarkers === 'door-right' : this.state.sideMarkers === 'door-left';
-                        sideHint = doorOnLeft ? '　|　左側：門 ／ 右側：窗' : '　|　左側：窗 ／ 右側：門';
+                        sideHint = doorOnLeft ? ' | 左側：門 / 右側：窗' : ' | 左側：窗 / 右側：門';
                     }
 
                     const title = new Paragraph({
-                        text: this.state.className || '教室座位表',
+                        children: [new TextRun({ text: this.state.className || '神來一班', bold: true, size: 36, font: 'Microsoft JhengHei' })],
                         heading: HeadingLevel.HEADING_1,
                         alignment: AlignmentType.CENTER,
-                        spacing: { after: 160 }
+                        spacing: { after: 140 }
                     });
                     const info = new Paragraph({
-                        text: `視角：${perspectiveLabel}${sideHint}　|　匯出時間：${new Date().toLocaleString()}`,
+                        children: [new TextRun({ text: `視角：${perspectiveLabel}${sideHint} | 匯出時間：${new Date().toLocaleString()}`, size: 18, color: '64748B', font: 'Microsoft JhengHei' })],
                         alignment: AlignmentType.RIGHT,
                         spacing: { after: 180 }
                     });
@@ -4674,7 +6461,7 @@
                     const buildStudentParagraphs = (student, isDisabled) => {
                         if (isDisabled) return [new Paragraph({ text: '', alignment: AlignmentType.CENTER })];
                         if (!student) {
-                            return [new Paragraph({ text: this.state.showEmptySeats ? '空位' : '', alignment: AlignmentType.CENTER })];
+                            return [new Paragraph({ children: [new TextRun({ text: this.state.showEmptySeats ? '空位' : '', color: '94A3B8', font: 'Microsoft JhengHei' })], alignment: AlignmentType.CENTER })];
                         }
                         let name = this.state.showAnonymous ? this.anonymizeName(student.name) : student.name;
                         const role = this.state.studentRoles[student.id];
@@ -4684,17 +6471,17 @@
                         const paragraphs = [];
                         if (role) {
                             paragraphs.push(new Paragraph({
-                                children: [new TextRun({ text: `[${role}]`, bold: true, size: 18, color: 'B45309' })],
+                                children: [new TextRun({ text: `[${role}]`, bold: true, size: 18, color: 'B45309', font: 'Microsoft JhengHei' })],
                                 alignment: AlignmentType.CENTER
                             }));
                         }
                         paragraphs.push(new Paragraph({
-                            children: [new TextRun({ text: mainLine, bold: true })],
+                            children: [new TextRun({ text: mainLine, bold: true, font: 'Microsoft JhengHei' })],
                             alignment: AlignmentType.CENTER
                         }));
                         if (this.state.showNeeds && student.needs) {
                             paragraphs.push(new Paragraph({
-                                children: [new TextRun({ text: `(${student.needs})`, size: 18, color: '475569' })],
+                                children: [new TextRun({ text: `(${student.needs})`, size: 18, color: '475569', font: 'Microsoft JhengHei' })],
                                 alignment: AlignmentType.CENTER
                             }));
                         }
@@ -4702,6 +6489,7 @@
                     };
 
                     const contentNodes = [];
+                    let includeWordFrontMarkers = true;
 
                     if (this.state.seatingMode === 'traditional') {
                         const rowIndices = this.state.viewPerspective === 'teacher'
@@ -4738,36 +6526,25 @@
                         }));
                         contentNodes.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }));
                     } else if (this.state.seatingMode === 'freeform') {
-                        // 自由畫布模式：依空間由上而下、由左而右列出各座位與角度資訊
-                        this.ensureFreeDesksInitialized();
-                        const orderedDesks = [...this.state.freeDesks].sort((a, b) => (Math.abs(a.y - b.y) > 40 ? a.y - b.y : a.x - b.x));
-                        const rows = [
-                            new TableRow({
-                                children: [
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '桌位序號', bold: true })], alignment: AlignmentType.CENTER })], width: { size: 18, type: WidthType.PERCENTAGE } }),
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '旋轉角度', bold: true })], alignment: AlignmentType.CENTER })], width: { size: 18, type: WidthType.PERCENTAGE } }),
-                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '學生資訊', bold: true })], alignment: AlignmentType.CENTER })], width: { size: 64, type: WidthType.PERCENTAGE } })
-                                ]
-                            })
-                        ];
-                        orderedDesks.forEach((d, idx) => {
-                            const s = this.state.layoutMap.get(d.id);
-                            if (!this.state.showEmptySeats && !s) return;
-                            rows.push(new TableRow({
-                                children: [
-                                    new TableCell({ children: [new Paragraph({ text: `桌位 ${idx + 1}`, alignment: AlignmentType.CENTER })], verticalAlign: 'center' }),
-                                    new TableCell({ children: [new Paragraph({ text: `${d.angle || 0}°`, alignment: AlignmentType.CENTER })], verticalAlign: 'center' }),
-                                    new TableCell({ children: buildStudentParagraphs(s, false), verticalAlign: 'center' })
-                                ]
-                            }));
-                        });
-                        contentNodes.push(new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }));
+                        // 自由畫布模式：直接嵌入高畫質空間平面圖（保留所有旋轉角度、黑板、講桌與門窗）
+                        includeWordFrontMarkers = false;
+                        const { svgString, width, height } = this.buildSeatingSvgData({ includeTitle: false });
+                        const pngBlob = await this.renderSvgToPngBlob(svgString, width, height, 2);
+                        const imgBuffer = new Uint8Array(await pngBlob.arrayBuffer());
+
+                        const maxWordWidth = 590;
+                        const maxWordHeight = 680;
+                        const ratio = Math.min(maxWordWidth / width, maxWordHeight / height, 1);
+                        const imgW = Math.round(width * ratio);
+                        const imgH = Math.round(height * ratio);
+
                         contentNodes.push(new Paragraph({
-                            children: [new TextRun({ text: '（提示：自由畫布含彈性座標與旋轉角度，若需完整空間平面圖建議搭配「匯出圖片」功能）', size: 18, color: '64748B' })],
-                            spacing: { before: 120 }
+                            children: [new ImageRun({ data: imgBuffer, transformation: { width: imgW, height: imgH } })],
+                            alignment: AlignmentType.CENTER,
+                            spacing: { after: 200 }
                         }));
                     } else {
-                        // 分組模式：視覺座位格子版 Word 匯出（保留各組真實欄數與代表色底色）
+                        // 分組模式：視覺座位格子版 Word 匯出
                         this.ensureGroupsInitialized();
                         const orderedGroups = this.state.viewPerspective === 'student'
                             ? [...this.state.groups].reverse()
@@ -4785,7 +6562,7 @@
                             if (this.state.viewPerspective === 'student') seatIndices.reverse();
 
                             const groupLabel = this.state.showGroupNames ? group.name : `第 ${idx + 1} 組`;
-                            const scoreSuffix = this.state.showGroupScores ? `　（積分：${group.score || 0} 分）` : '';
+                            const scoreSuffix = this.state.showGroupScores ? ` (積分：${group.score || 0} 分)` : '';
 
                             const tableRows = [
                                 new TableRow({
@@ -4794,7 +6571,7 @@
                                             columnSpan: colCount,
                                             shading: { type: ShadingType.CLEAR, fill: colorObj.hex },
                                             children: [new Paragraph({
-                                                children: [new TextRun({ text: `${groupLabel}${scoreSuffix}`, bold: true })],
+                                                children: [new TextRun({ text: `${groupLabel}${scoreSuffix}`, bold: true, font: 'Microsoft JhengHei' })],
                                                 alignment: AlignmentType.CENTER
                                             })]
                                         })
@@ -4828,20 +6605,31 @@
                     }
 
                     const frontMarkers = [];
-                    if (this.state.showBlackboard) {
-                        frontMarkers.push(new Paragraph({ children: [new TextRun({ text: '【 黑板 】', bold: true })], alignment: AlignmentType.CENTER, spacing: { before: 100, after: 100 } }));
-                    }
-                    if (this.state.showTeacherDesk) {
-                        frontMarkers.push(new Paragraph({ children: [new TextRun({ text: '【 講桌 】', bold: true })], alignment: AlignmentType.CENTER, spacing: { before: 80, after: 140 } }));
+                    if (includeWordFrontMarkers) {
+                        if (this.state.showBlackboard) {
+                            frontMarkers.push(new Paragraph({ children: [new TextRun({ text: '【 黑板 】', bold: true, font: 'Microsoft JhengHei' })], alignment: AlignmentType.CENTER, spacing: { before: 100, after: 100 } }));
+                        }
+                        if (this.state.showTeacherDesk) {
+                            frontMarkers.push(new Paragraph({ children: [new TextRun({ text: '【 講桌 】', bold: true, font: 'Microsoft JhengHei' })], alignment: AlignmentType.CENTER, spacing: { before: 80, after: 140 } }));
+                        }
                     }
 
                     const docChildren = [title, info];
                     if (this.state.viewPerspective === 'teacher') docChildren.push(...frontMarkers, ...contentNodes);
                     else docChildren.push(...contentNodes, ...[...frontMarkers].reverse());
 
-                    const doc = new Document({ sections: [{ properties: {}, children: docChildren }] });
+                    const doc = new Document({
+                        styles: {
+                            default: {
+                                document: {
+                                    run: { font: 'Microsoft JhengHei' }
+                                }
+                            }
+                        },
+                        sections: [{ properties: {}, children: docChildren }]
+                    });
                     const blob = await Packer.toBlob(doc);
-                    saveAs(blob, `${this.state.className || '座位表'}.docx`);
+                    saveAs(blob, `${this.state.className || '神來一班'}_座位表.docx`);
                     this.showToast('Word 座位表匯出成功！', 'success');
                 } catch (err) {
                     console.error('Word export failed', err);

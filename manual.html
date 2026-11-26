@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用說明書｜教室座位神管理系統 Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&display=swap');
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .toc-link { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; color: #475569; transition: all 0.15s; }
+        .toc-link:hover { background-color: #eff6ff; color: #2563eb; }
+        .toc-link.active { background-color: #dbeafe; color: #1d4ed8; font-weight: 700; }
+        .section-card { background: #ffffff; border-radius: 0.85rem; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); padding: 1.5rem; scroll-margin-top: 84px; }
+        .section-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.6rem; padding-bottom: 0.75rem; border-bottom: 2px solid #eff6ff; margin-bottom: 1rem; }
+        .kbd { display: inline-block; padding: 0.12rem 0.45rem; font-size: 0.75rem; font-family: monospace; font-weight: 700; color: #334155; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.3rem; box-shadow: 0 1px 0 #cbd5e1; }
+        .badge-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+
+        /* 動態操作教學劇場樣式 */
+        .demo-scene-tab { padding: 0.38rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.35rem; }
+        .demo-scene-tab:hover { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+        .demo-scene-tab.active { background: #2563eb; color: #ffffff; border-color: #2563eb; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); }
+        .demo-stage { position: relative; min-height: 330px; background: radial-gradient(#cbd5e1 1px, transparent 1px), #f8fafc; background-size: 18px 18px; border-radius: 0.75rem; border: 1px solid #cbd5e1; overflow: hidden; padding: 1rem; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .demo-desk { transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1); border: 1.5px solid #cbd5e1; border-radius: 0.45rem; background: #ffffff; padding: 0.4rem 0.3rem; text-align: center; position: relative; user-select: none; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06); }
+        .demo-desk.male { background: #f0f9ff; border-left: 4px solid #60a5fa; border-color: #93c5fd; }
+        .demo-desk.female { background: #fdf4ff; border-left: 4px dashed #f472b6; border-color: #f9a8d4; }
+        .demo-desk.disabled { background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 5px, #e2e8f0 5px, #e2e8f0 10px); border: 1px dashed #cbd5e1; color: #94a3b8; opacity: 0.65; }
+        .demo-desk.locked { border: 2px solid #f59e0b !important; background: #fffbeb !important; }
+        .demo-desk.highlight { border: 2.5px solid #f59e0b !important; background: #fef3c7 !important; box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.25); transform: scale(1.06); z-index: 20; }
+        .demo-desk.picker-hit { border: 2.5px solid #ec4899 !important; background: #fce7f3 !important; box-shadow: 0 0 14px rgba(236, 72, 153, 0.5); transform: scale(1.08); z-index: 25; }
+        .demo-desk.selected { outline: 2.5px solid #2563eb; outline-offset: 2px; box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.2); }
+        .demo-marquee { position: absolute; border: 2px dashed #2563eb; background: rgba(59, 130, 246, 0.14); border-radius: 6px; pointer-events: none; transition: all 0.45s ease; z-index: 30; }
+        .demo-progress-bar { height: 3px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+        .demo-progress-fill { height: 100%; background: linear-gradient(90deg, #06b6d4, #2563eb); width: 0%; transition: width 0.2s linear; }
+
+        /* 模擬滑鼠游標與點擊波紋演示 */
+        #live-demo { position: relative; }
+        .demo-cursor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 60;
+            pointer-events: none;
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+            opacity: 0;
+            transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+            filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.35));
+        }
+        .demo-cursor.visible { opacity: 1; }
+        .demo-cursor-icon {
+            font-size: 20px;
+            color: #0f172a;
+            -webkit-text-stroke: 1.5px #ffffff;
+            transition: transform 0.12s ease;
+        }
+        .demo-cursor.clicking .demo-cursor-icon { transform: scale(0.82); color: #2563eb; }
+        .demo-cursor-label {
+            background: #1e293b;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            white-space: nowrap;
+            margin-top: 10px;
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.25);
+        }
+        .demo-cursor-ripple {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 999px;
+            border: 2.5px solid #2563eb;
+            background: rgba(59, 130, 246, 0.25);
+            pointer-events: none;
+            z-index: 55;
+            transform: translate(-50%, -50%) scale(0.3);
+            opacity: 1;
+            transition: transform 0.45s ease-out, opacity 0.45s ease-out;
+        }
+        .demo-cursor-ripple.expand { transform: translate(-50%, -50%) scale(1.9); opacity: 0; }
+
+        /* 右下角可拖曳吉祥物與粒子特效 */
+        #mascot { position: fixed; bottom: 18px; right: 18px; width: 84px; height: auto; cursor: move; transition: transform 0.08s; z-index: 999; touch-action: none; }
+        #mascot:hover { filter: brightness(1.08); }
+        .particle { position: fixed; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; z-index: 1001; transition: transform 1s ease-out, opacity 1s ease-out; }
+
+        @media (max-width: 640px) {
+            .section-card { padding: 1.1rem; }
+            .section-title { font-size: 1.1rem; }
+            .demo-stage { min-height: 290px; padding: 0.65rem; }
+            #mascot { width: 64px; bottom: 12px; right: 12px; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- 頂部固定導覽列 -->
+    <header class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-3 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                    <i class="fas fa-book text-white text-base"></i>
+                </span>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold leading-tight">教室座位神管理系統 <span class="text-yellow-300 text-xs italic">Pro</span> 使用說明書</h1>
+                    <p class="hidden sm:block text-blue-100 text-[11px]">完整功能操作手冊・排位策略指南・常見問題</p>
+                </div>
+            </div>
+            <a href="index.html" class="bg-white text-blue-700 hover:bg-blue-50 font-bold px-3.5 py-2 rounded-full text-xs sm:text-sm shadow flex items-center gap-1.5 transition shrink-0">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回系統主頁</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- 手機版快速章節導覽列 -->
+    <nav class="lg:hidden bg-white border-b border-gray-200 sticky top-[58px] z-40 overflow-x-auto">
+        <div class="flex items-center gap-1.5 px-3 py-2 whitespace-nowrap text-xs">
+            <a href="#live-demo" class="px-2.5 py-1 rounded-full bg-blue-600 text-white font-semibold"><i class="fas fa-play-circle mr-1"></i>動態演示</a>
+            <a href="#quickstart" class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 font-semibold"><i class="fas fa-rocket mr-1"></i>快速上手</a>
+            <a href="#overview" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700"><i class="fas fa-chalkboard-user mr-1"></i>多班級</a>
+            <a href="#students" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700"><i class="fas fa-users mr-1"></i>名單編輯</a>
+            <a href="#modes" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700"><i class="fas fa-table-cells-large mr-1"></i>三大模式</a>
+            <a href="#rules" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700"><i class="fas fa-wand-magic-sparkles mr-1"></i>智慧排位</a>
+            <a href="#classroom" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700"><i class="fas fa-dice mr-1"></i>課堂互動</a>
+            <a href="#export" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700"><i class="fas fa-file-export mr-1"></i>匯出指南</a>
+            <a href="#faq" class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700"><i class="fas fa-circle-question mr-1"></i>常見問題</a>
+        </div>
+    </nav>
+
+    <!-- 主內容區 -->
+    <main class="container mx-auto px-3 sm:px-4 py-6 flex-grow grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <!-- 桌機左側固定目錄 -->
+        <aside class="hidden lg:block lg:col-span-1 sticky top-20">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-3 space-y-1">
+                <div class="px-2.5 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fas fa-list-ul"></i> 章節目錄
+                </div>
+                <a href="#live-demo" class="toc-link active"><i class="fas fa-play-circle w-4 text-blue-600"></i>動態操作教學演示</a>
+                <a href="#quickstart" class="toc-link"><i class="fas fa-rocket w-4 text-blue-500"></i>快速上手 3 步驟</a>
+                <a href="#overview" class="toc-link"><i class="fas fa-chalkboard-user w-4 text-cyan-600"></i>一、多班級與系統管理</a>
+                <a href="#students" class="toc-link"><i class="fas fa-users w-4 text-teal-600"></i>二、學生名單與雙擊編輯</a>
+                <a href="#modes" class="toc-link"><i class="fas fa-table-cells-large w-4 text-indigo-600"></i>三、三大座位模式詳解</a>
+                <a href="#rules" class="toc-link"><i class="fas fa-wand-magic-sparkles w-4 text-purple-600"></i>四、智慧排位與拖曳模式</a>
+                <a href="#classroom" class="toc-link"><i class="fas fa-dice w-4 text-pink-600"></i>五、課堂投影與互動工具</a>
+                <a href="#export" class="toc-link"><i class="fas fa-file-export w-4 text-emerald-600"></i>六、圖片、SVG 與 Word 匯出</a>
+                <a href="#faq" class="toc-link"><i class="fas fa-circle-question w-4 text-amber-600"></i>七、快捷鍵與常見問題</a>
+                <div class="pt-3 mt-2 border-t border-gray-100">
+                    <a href="index.html" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition shadow-sm">
+                        <i class="fas fa-house"></i> 回到座位管理系統
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右側說明書本文 -->
+        <div class="lg:col-span-3 space-y-6 min-w-0">
+
+            <!-- 互動式動態操作教學劇場 -->
+            <section id="live-demo" class="section-card border-blue-200 shadow-md">
+                <!-- 模擬滑鼠點按演示游標 -->
+                <div id="demoCursor" class="demo-cursor" aria-hidden="true">
+                    <i class="fas fa-arrow-pointer demo-cursor-icon"></i>
+                    <span id="demoCursorLabel" class="demo-cursor-label">點擊示範</span>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b-2 border-blue-100">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                            <i class="fas fa-play-circle text-blue-600"></i>
+                            <span>完整功能動態操作教學（即時互動演示）</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">點擊下方任意主題觀看動態演示，或直接點擊舞臺下的互動按鈕親自試玩！</p>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button id="demoPrevBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition" title="上一個教學場景"><i class="fas fa-backward-step"></i></button>
+                        <button id="demoAutoBtn" type="button" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                            <i class="fas fa-pause"></i><span>暫停導覽</span>
+                        </button>
+                        <button id="demoNextBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition" title="下一個教學場景"><i class="fas fa-forward-step"></i></button>
+                    </div>
+                </div>
+
+                <!-- 7 大演示場景切換列 -->
+                <div id="demoSceneTabs" class="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2">
+                    <button type="button" class="demo-scene-tab active" data-scene="0"><i class="fas fa-paste"></i>1. 名單與前排</button>
+                    <button type="button" class="demo-scene-tab" data-scene="1"><i class="fas fa-road"></i>2. 走道與輪調</button>
+                    <button type="button" class="demo-scene-tab" data-scene="2"><i class="fas fa-people-group"></i>3. 分組客製</button>
+                    <button type="button" class="demo-scene-tab" data-scene="3"><i class="fas fa-wand-magic-sparkles"></i>4. 智慧排位</button>
+                    <button type="button" class="demo-scene-tab" data-scene="4"><i class="fas fa-compass-drafting"></i>5. 自由畫布框選</button>
+                    <button type="button" class="demo-scene-tab" data-scene="5"><i class="fas fa-dice"></i>6. 課堂點人翻轉</button>
+                    <button type="button" class="demo-scene-tab" data-scene="6"><i class="fas fa-file-export"></i>7. 匿名與匯出</button>
+                </div>
+
+                <!-- 自動播放進度條 -->
+                <div class="demo-progress-bar mb-3">
+                    <div id="demoProgressFill" class="demo-progress-fill"></div>
+                </div>
+
+                <!-- 當前步驟動態解說條 -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg px-3.5 py-2.5 mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 text-xs sm:text-sm text-blue-950 font-semibold">
+                        <span id="demoStepBadge" class="bg-blue-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0">1 / 7</span>
+                        <span id="demoCaptionText">正在載入動態教學...</span>
+                    </div>
+                    <span id="demoSubHint" class="text-[11px] text-blue-700 font-medium"></span>
+                </div>
+
+                <!-- 即時互動演示舞臺 -->
+                <div id="demoStage" class="demo-stage mb-3"></div>
+
+                <!-- 親自試玩互動控制列 -->
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <span class="text-xs font-bold text-slate-600"><i class="fas fa-hand-pointer text-blue-500 mr-1"></i>親自試玩此功能：</span>
+                    <div id="demoActionBar" class="flex flex-wrap items-center gap-1.5"></div>
+                </div>
+            </section>
+
+            <!-- 快速上手 -->
+            <section id="quickstart" class="section-card bg-gradient-to-br from-blue-50/70 to-cyan-50/50 border-blue-200">
+                <h2 class="section-title text-blue-900 border-blue-200">
+                    <i class="fas fa-rocket text-blue-600"></i> 快速上手 3 步驟
+                </h2>
+                <p class="text-sm text-gray-700 mb-4 leading-relaxed">
+                    本系統專為第一線導師與科任老師設計，免安裝、免登入，所有資料皆自動儲存在您的瀏覽器中。只要 3 個步驟即可完成班級排位與列印：
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                    <div class="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
+                        <div class="text-xs font-bold text-blue-600 mb-1"><i class="fas fa-1 mr-1"></i>步驟一・匯入名單</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">從 Excel / Google 試算表直接複製貼上至左側名單框，或上傳 <code class="bg-gray-100 px-1 rounded">.xlsx</code> 檔，點擊<strong>「刷新名單」</strong>即可上座。</p>
+                    </div>
+                    <div class="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
+                        <div class="text-xs font-bold text-indigo-600 mb-1"><i class="fas fa-2 mr-1"></i>步驟二・客製排位</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">切換<strong>傳統矩陣</strong>（含走道）、<strong>分組座位</strong>或<strong>自由畫布</strong>（8 大彈性陣型與旋轉角度），套用互斥、前排與梅花座等智慧排位。</p>
+                    </div>
+                    <div class="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
+                        <div class="text-xs font-bold text-emerald-600 mb-1"><i class="fas fa-3 mr-1"></i>步驟三・投影或匯出</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">點擊頂部<strong>「投影模式」</strong>全寬置中展示，或一鍵匯出高畫質 <strong>PNG</strong>、可無限放大之 <strong>SVG</strong> 向量圖與 <strong>Word (.docx)</strong>。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 一、多班級與系統管理 -->
+            <section id="overview" class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-chalkboard-user text-cyan-600"></i> 一、多班級與系統管理（頂部導覽列）
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div class="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="font-bold text-gray-800 mb-1"><i class="fas fa-layer-group text-cyan-600 mr-1.5"></i>多班級切換</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">科任老師可透過頂部班級下拉選單建立多個班級（預設名稱為<strong>「神來一班」</strong>），支援一鍵 <i class="fas fa-plus text-emerald-600"></i> 新增、<i class="fas fa-copy text-sky-600"></i> 複製（方便保留格局建立 B 版座位）與 <i class="fas fa-trash text-rose-500"></i> 刪除。</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="font-bold text-gray-800 mb-1"><i class="fas fa-undo text-blue-600 mr-1.5"></i>復原與重做（30 步歷史）</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">每次排位、拖曳、輪調或調整格局都會自動記錄歷史快照，點擊頂部 <i class="fas fa-undo"></i> / <i class="fas fa-redo"></i> 或按 <span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> 即可隨時還原。</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="font-bold text-gray-800 mb-1"><i class="fas fa-expand text-amber-500 mr-1.5"></i>投影模式（全寬置中）</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">點擊<strong>「投影模式」</strong>會自動隱藏左側控制欄，將座位表精準水平置中顯示，最適合教室白板大螢幕投影或手機全幅檢視。</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="font-bold text-gray-800 mb-1"><i class="fas fa-save text-blue-700 mr-1.5"></i>專案檔備份與一鍵清除暫存</div>
+                        <p class="text-xs text-gray-600 leading-relaxed">使用<strong>「儲存檔 / 讀取檔」</strong>可匯出 <code class="bg-gray-200 px-1 rounded">.json</code> 換電腦接續使用；點擊紅色<strong>「清除暫存」</strong>（<i class="fas fa-broom text-rose-600"></i>）可二次確認後清空所有歷史紀錄與本機暫存，重置回乾淨的「神來一班」。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 二、學生名單與雙擊編輯 -->
+            <section id="students" class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-users text-teal-600"></i> 二、學生名單匯入與雙擊編輯
+                </h2>
+                <div class="space-y-4 text-sm text-gray-700">
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-1.5"><i class="fas fa-paste text-teal-600 mr-1.5"></i>多元名單格式（可直接從 Excel 貼上）</h3>
+                        <p class="text-xs text-gray-600 mb-2 leading-relaxed">每行代表一位學生，支援<strong>空白</strong>、<strong>Tab 鍵（Excel / Google 試算表直接複製貼上）</strong>與<strong>中英文逗號</strong>分隔。性別可填「男 / 女 / M / F」，也可省略性別直接填備註：</p>
+                        <pre class="bg-slate-900 text-slate-100 text-xs p-3 rounded-lg overflow-x-auto font-mono leading-relaxed">1 公小民 男 需要提醒
+2,邱小瑜,女,視力不好
+3	陳大德	M
+4 林美盛 F 前排優先</pre>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-3 rounded-lg bg-teal-50 border border-teal-200">
+                            <div class="font-bold text-teal-900 text-xs mb-1"><i class="fas fa-sync-alt mr-1"></i>刷新名單 vs 依座號排列</div>
+                            <p class="text-xs text-teal-800 leading-relaxed">修改名單後按<strong>「刷新名單」</strong>會保留所有人原本的位置，僅更新姓名／備註並把新增學生放入空位；按<strong>「依座號排列」</strong>則會重新照順序排位。</p>
+                        </div>
+                        <div class="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                            <div class="font-bold text-blue-900 text-xs mb-1"><i class="fas fa-user-pen mr-1"></i>雙擊座位卡片快速編輯</div>
+                            <p class="text-xs text-blue-800 leading-relaxed">直接<strong>雙擊任一位學生的座位卡片</strong>，即可修改座號、姓名、性別、<strong>分組職務（組長／副組長／紀錄／報告／器材）</strong>、需求備註、勾選<strong>「前排優先」</strong>或<strong>「鎖定座位」</strong>，並自動同步回左側名單框。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 三、三大座位模式詳解 -->
+            <section id="modes" class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-table-cells-large text-indigo-600"></i> 三、三大座位模式詳解
+                </h2>
+                <div class="space-y-4">
+                    <!-- 傳統矩陣 -->
+                    <div class="border border-blue-200 rounded-xl p-4 bg-blue-50/40">
+                        <h3 class="font-bold text-blue-900 text-sm mb-2 flex items-center gap-2">
+                            <span class="badge-pill bg-blue-600 text-white"><i class="fas fa-border-all"></i> 模式 1</span>
+                            傳統矩陣模式（含真實走道與一鍵輪調）
+                        </h3>
+                        <ul class="text-xs text-gray-700 space-y-1.5 list-disc pl-5 leading-relaxed">
+                            <li><strong>自訂行列尺寸</strong>：支援 1～20 列與 1～20 行，縮小版面時超出範圍的學生會安全送回暫存區，絕不遺失。</li>
+                            <li><strong>走道／障礙物（禁用格）</strong>：點擊<strong>「點選格子設為走道」</strong>後，點擊任何格子即可切換為不排位走道（柱子、門邊空位）；也可一鍵點<strong>「2-2 走道」</strong>快速建立雙人併桌走道格局。</li>
+                            <li><strong>一鍵輪調換位</strong>：於「智慧排位」分頁提供上下左右 4 個輪調按鈕，每月換位一鍵搞定，且自動跳過走道並讓已鎖定的學生原地不動。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 分組座位 -->
+                    <div class="border border-emerald-200 rounded-xl p-4 bg-emerald-50/40">
+                        <h3 class="font-bold text-emerald-900 text-sm mb-2 flex items-center gap-2">
+                            <span class="badge-pill bg-emerald-600 text-white"><i class="fas fa-people-group"></i> 模式 2</span>
+                            分組座位模式（合作學習高度客製化）
+                        </h3>
+                        <ul class="text-xs text-gray-700 space-y-1.5 list-disc pl-5 leading-relaxed">
+                            <li><strong>分組內建自由畫布 &amp; 空間區/走道</strong>：教室每排組數可指定「自動換行 / 每排 2～4 組」，或直接切換為<strong>「自由畫布擺放（任意定位）」</strong>；無須跳轉模式，即可按住小組標題列拖曳至教室特定位置、新增／縮放／旋轉／刪除走道空間區，並隨時按<strong>「整齊對齊」</strong>歸位！</li>
+                            <li><strong>自動均分全員 &amp; 組長自動分散</strong>：提供<strong>「依組數均分全員」</strong>與<strong>「依每組人數分組」</strong>（0 空位、0 落單），隨機分組時會自動將標記為「組長」的同學分散至不同小組。</li>
+                            <li><strong>拖曳標題列直接轉組</strong>：將學生卡片直接拖放到他組「組名標題列」放開即可自動轉組（目標組已滿自動 +1 格、原組自動整理空位）。</li>
+                            <li><strong>每組獨立桌型與雙向旋轉</strong>：點擊每組標題列的 <i class="fas fa-table-cells text-sky-600"></i> 可單獨切換桌型（2 欄田字／3 欄橫排／1 欄長桌／單排橫列）；點擊 <i class="fas fa-rotate-left text-violet-600"></i> / <i class="fas fa-rotate-right text-violet-600"></i> 可雙向旋轉整組角度（每次 <code>±15°</code>）。</li>
+                            <li><strong>代表色、即時男女統計與計分板</strong>：點擊 <i class="fas fa-palette text-slate-600"></i> 切換 8 種隊伍代表色；標題列即時顯示人數與 <i class="fas fa-mars text-blue-500"></i>/<i class="fas fa-venus text-pink-500"></i> 統計；於「顯示與匯出」開啟<strong>「小組計分板」</strong>即可即時加扣分。</li>
+                            <li><strong>組長與整組輪調</strong>：雙擊學生設為「組長」會顯示金色皇冠 <i class="fas fa-crown text-amber-600"></i>；於「智慧排位」可執行<strong>「整組順／逆時針輪調」</strong>，組員不變但整組交換位置。</li>
+                        </ul>
+                    </div>
+
+                    <!-- 自由畫布 -->
+                    <div class="border border-purple-200 rounded-xl p-4 bg-purple-50/40">
+                        <h3 class="font-bold text-purple-900 text-sm mb-2 flex items-center gap-2">
+                            <span class="badge-pill bg-purple-600 text-white"><i class="fas fa-compass-drafting"></i> 模式 3</span>
+                            自由畫布模式（任意擺放、角度旋轉與 8 大彈性陣型）
+                        </h3>
+                        <ul class="text-xs text-gray-700 space-y-1.5 list-disc pl-5 leading-relaxed">
+                            <li><strong>依實際人數建桌與空間區（走道／障礙物）</strong>：自由畫布與 8 大陣型會<strong>依目前實際學生人數精準產生對應桌數</strong>（不浪費畫面塞一堆空位），也可隨時按<strong>「依人數對齊桌數」</strong>一鍵整理；點擊<strong>「新增空間區/走道」</strong>（<i class="fas fa-road text-orange-500"></i>）可在畫布任意加入可拖曳、縮放大小、雙向旋轉與改名的走道／柱子／書櫃區域，並完整呈現於 PNG / SVG / Word 匯出。</li>
+                            <li><strong>雙階段操作不打架</strong>：在<strong>「編排桌位/角度」</strong>模式下可拖曳桌子任意定位（支援 20px 格線吸附）、點擊下方控制條 <code>±15°</code> 旋轉／歸零／刪除；完成後按<strong>「切回安排學生」</strong>即可隱藏控制條並拖曳學生互換座位。</li>
+                            <li><strong>框選群組批次移動與旋轉</strong>：編排模式下於<strong>空白處拖曳畫框</strong>（或按住 <span class="kbd">Ctrl</span> / <span class="kbd">Shift</span> 點擊多選），即可<strong>整群同步拖曳移動</strong>，並透過上方藍色批次工具列執行<strong>整群繞中心公轉</strong>、<strong>各桌原地自轉</strong>、<strong>水平／垂直對齊</strong>與角度歸零。</li>
+                            <li><strong>畫布群組綁定為小組（整組移動旋轉 + 完整分組功能）</strong>：框選多張桌子後點擊<strong>「綁定為小組」</strong>（<i class="fas fa-object-group text-emerald-600"></i>），畫布會自動產生帶代表色與組名的分組外框；<strong>綁定後直接拖曳組框標題或組內任一張桌子即可整組同步移動</strong>（按住 <span class="kbd">Alt</span> 拖曳可單獨微調組內單桌），並可直接點擊標題列的 <i class="fas fa-rotate-left text-violet-600"></i>/<i class="fas fa-rotate-right text-violet-600"></i> 整組公轉，同時享有<strong>改組名／換代表色</strong>、<strong>即時男女統計</strong>、<strong>小組計分板</strong>、<strong>分組隨機抽組</strong>、<strong>S 型異質分組</strong>與 PNG / SVG / Word 完整匯出！</li>
+                            <li><strong>內建 8 大一鍵經典陣型</strong>：
+                                <div class="flex flex-wrap gap-1.5 mt-1.5">
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-magnet fa-rotate-180"></i>U 字馬蹄形</span>
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-layer-group"></i>雙層大 U 陣</span>
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-angles-up"></i>魚骨 V 字斜角</span>
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-circle-half-stroke"></i>圓弧扇形陣</span>
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-circle-notch"></i>圓桌會議環</span>
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-comments"></i>面對面辯論</span>
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-gem"></i>菱形討論群</span>
+                                    <span class="badge-pill bg-white border border-purple-200 text-purple-800"><i class="fas fa-border-all"></i>整齊矩陣</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 四、智慧排位與拖曳模式 -->
+            <section id="rules" class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-wand-magic-sparkles text-purple-600"></i> 四、智慧排位規則與拖曳模式
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs text-gray-700 leading-relaxed">
+                    <div class="p-3.5 rounded-lg border border-gray-200 bg-gray-50">
+                        <div class="font-bold text-gray-900 mb-1.5"><i class="fas fa-shuffle text-purple-600 mr-1.5"></i>三種智慧排位策略</div>
+                        <ul class="space-y-1 list-disc pl-4">
+                            <li><strong>一般隨機排列</strong>：打亂未鎖定學生並自動遵守互斥與前排規則。</li>
+                            <li><strong>男女梅花座 / 分組男女平均</strong>：傳統模式盡量男女交錯；分組模式盡量平均各組男女比例。</li>
+                            <li><strong>S 型異質分組</strong>：名單依程度由高到低貼入後，自動以蛇形順序（1→N、N→1）達成各組程度均衡。</li>
+                        </ul>
+                    </div>
+                    <div class="p-3.5 rounded-lg border border-gray-200 bg-gray-50">
+                        <div class="font-bold text-gray-900 mb-1.5"><i class="fas fa-shield-halved text-amber-600 mr-1.5"></i>進階條件保護</div>
+                        <ul class="space-y-1 list-disc pl-4">
+                            <li><strong>座位鎖定</strong>：點擊卡片右上角 <i class="fas fa-lock text-amber-500"></i> 鎖定，隨機、輪調與拖曳皆不會移動該生（例如固定組長重抽組員）。</li>
+                            <li><strong>前排優先</strong>：備註含「前排 / 視力 / 近視 / 弱視」或雙擊勾選，隨機時自動優先排於前兩排（自由畫布為最前 1/3 桌位）。</li>
+                            <li><strong>綁定同組 &amp; 互斥名單</strong>：設定 <i class="fas fa-link text-emerald-600"></i> 必同組小老師配對，或 <i class="fas fa-ban text-rose-500"></i> 互斥名單避免相鄰／同組。</li>
+                        </ul>
+                    </div>
+                    <div class="p-3.5 rounded-lg border border-yellow-200 bg-yellow-50/60 md:col-span-2">
+                        <div class="font-bold text-yellow-900 mb-1"><i class="fas fa-hand-pointer text-yellow-700 mr-1.5"></i>兩兩互換 vs 遞補順延 &amp; 暫存區</div>
+                        <p>「<strong>兩兩互換</strong>」拖曳 A 到 B 只會交換兩人座位、不影響其他人（自由畫布模式固定採用此方式保護座標）；「<strong>遞補順延</strong>」拖曳時會順延補位，且自動保護已鎖定座位、溢出的學生會安全退回上方的<strong>暫存區</strong>（暫存區無人時會自動折疊省空間）。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 五、課堂投影與互動工具 -->
+            <section id="classroom" class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-dice text-pink-600"></i> 五、課堂投影與互動工具
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 leading-relaxed">
+                    <div class="p-3.5 rounded-lg border border-pink-100 bg-pink-50/40">
+                        <div class="font-bold text-pink-900 mb-1"><i class="fas fa-dice mr-1.5"></i>課堂隨機點人 &amp; 分組隨機抽組</div>
+                        <p>座位表工具列提供<strong>「隨機點人」</strong>（分組模式下額外出現<strong>「隨機抽組」</strong>），執行跑馬燈跳動動畫與慶祝音效，支援<strong>「不重複抽取」</strong>與一鍵重置名單，上課提問或報告抽籤超有氣氛。</p>
+                    </div>
+                    <div class="p-3.5 rounded-lg border border-orange-100 bg-orange-50/40">
+                        <div class="font-bold text-orange-900 mb-1"><i class="fas fa-compass mr-1.5"></i>視角翻轉與左右門窗標示</div>
+                        <p>一鍵切換<strong>「黑板在上（俯視 / 學生視角）」⇄「黑板在下（講臺視角）」</strong>，可同時開啟左右「前門／後門／靠窗」標示，切換視角時門窗會自動跟隨物理方向左右與前後翻轉。</p>
+                    </div>
+                    <div class="p-3.5 rounded-lg border border-amber-100 bg-amber-50/40">
+                        <div class="font-bold text-amber-900 mb-1"><i class="fas fa-magnifying-glass mr-1.5"></i>快速搜尋高亮與縮放滑桿</div>
+                        <p>上方搜尋框輸入座號、姓名、備註或職務即可讓對應座位閃爍高亮並自動捲動至視野中；縮放滑桿支援 <strong>70%～130%</strong> 無段調整，大班也能一頁看全。</p>
+                    </div>
+                    <div class="p-3.5 rounded-lg border border-slate-200 bg-slate-50">
+                        <div class="font-bold text-slate-800 mb-1"><i class="fas fa-user-secret mr-1.5"></i>隱私匿名與顯示開關</div>
+                        <p>於「顯示與匯出」分頁可自由切換：性別色塊、性別圖示、需求註記、空位顯示、組名顯示、<strong>匿名遮罩（姓名中間改為 O，適合公開分享或貼在教室外）</strong>與右下角吉祥物顯示。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 六、匯出指南 -->
+            <section id="export" class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-file-export text-emerald-600"></i> 六、圖片、SVG 與 Word 匯出指南
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-700 leading-relaxed">
+                    <div class="p-3.5 rounded-lg border border-indigo-200 bg-indigo-50/40">
+                        <div class="font-bold text-indigo-900 mb-1"><i class="fas fa-image mr-1.5"></i>匯出 PNG 圖片</div>
+                        <p>採用原生向量引擎轉 2 倍高解析 PNG，完整保留中文銳利字體、性別底色、左右門窗與所有旋轉角度，絕不裁切文字，適合直接傳送至家長群組或班級公告。</p>
+                    </div>
+                    <div class="p-3.5 rounded-lg border border-cyan-200 bg-cyan-50/40">
+                        <div class="font-bold text-cyan-900 mb-1"><i class="fas fa-bezier-curve mr-1.5"></i>匯出 SVG 向量圖檔</div>
+                        <p>輸出標準 <code class="bg-white px-1 rounded">.svg</code> 向量格式，無論放進簡報、大型海報或大圖輸出皆可無限放大不失真，並可用 Illustrator / Inkscape 二次編輯。</p>
+                    </div>
+                    <div class="p-3.5 rounded-lg border border-blue-200 bg-blue-50/40">
+                        <div class="font-bold text-blue-900 mb-1"><i class="fas fa-file-word mr-1.5"></i>匯出 Word (.docx)</div>
+                        <p>自動套用微軟正黑體避免缺字：傳統模式輸出整齊表格（跳過走道）；分組模式輸出<strong>視覺座位格子版</strong>；自由畫布模式則<strong>直接嵌入高畫質空間平面圖</strong>，印出來張貼一目了然。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 七、快捷鍵與常見問題 -->
+            <section id="faq" class="section-card">
+                <h2 class="section-title">
+                    <i class="fas fa-circle-question text-amber-600"></i> 七、快捷鍵與常見問題（FAQ）
+                </h2>
+                <div class="mb-5">
+                    <h3 class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-2"><i class="fas fa-keyboard mr-1"></i>常用快捷鍵</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs border-collapse border border-gray-200 rounded-lg overflow-hidden">
+                            <thead class="bg-gray-100 text-gray-700">
+                                <tr>
+                                    <th class="border border-gray-200 px-3 py-2 text-left w-1/3">按鍵 / 操作</th>
+                                    <th class="border border-gray-200 px-3 py-2 text-left">功能說明</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr><td class="border border-gray-200 px-3 py-2"><span class="kbd">Ctrl</span> + <span class="kbd">Z</span></td><td class="border border-gray-200 px-3 py-2">復原上一步（在輸入框打字時維持原生文字復原）</td></tr>
+                                <tr><td class="border border-gray-200 px-3 py-2"><span class="kbd">Ctrl</span> + <span class="kbd">Y</span> 或 <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">Z</span></td><td class="border border-gray-200 px-3 py-2">重做剛復原的操作</td></tr>
+                                <tr><td class="border border-gray-200 px-3 py-2"><span class="kbd">Esc</span></td><td class="border border-gray-200 px-3 py-2">關閉彈窗，或退出走道編輯／自由畫布編排模式</td></tr>
+                                <tr><td class="border border-gray-200 px-3 py-2"><strong>雙擊學生卡片</strong></td><td class="border border-gray-200 px-3 py-2">開啟快速編輯視窗（修改姓名、備註、職務、前排與鎖定）</td></tr>
+                                <tr><td class="border border-gray-200 px-3 py-2"><span class="kbd">Ctrl</span> / <span class="kbd">Shift</span> + 點擊桌子</td><td class="border border-gray-200 px-3 py-2">於自由畫布編排模式中加選或取消選取多張桌子</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="space-y-3 text-xs text-gray-700 leading-relaxed">
+                    <div class="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="font-bold text-gray-900 mb-1"><i class="fas fa-q text-blue-600 mr-1.5"></i>資料會上傳到網路伺服器嗎？</div>
+                        <p class="text-gray-600">不會！所有學生名單與座位表僅保存在您本機瀏覽器的 <code class="bg-gray-200 px-1 rounded">localStorage</code> 中，確保學生個資安全不外流。若需更換電腦或清理瀏覽器，請先使用頂部<strong>「儲存檔」</strong>備份 <code class="bg-gray-200 px-1 rounded">.json</code> 檔案。</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="font-bold text-gray-900 mb-1"><i class="fas fa-q text-blue-600 mr-1.5"></i>為什麼有些學生卡片左上角會自動出現「前」標記？</div>
+                        <p class="text-gray-600">只要學生的備註包含「前排」、「視力」、「近視」或「弱視」關鍵字，系統就會貼心自動標記為前排優先；若不需優先，可雙擊該生卡片修改備註或取消勾選。</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="font-bold text-gray-900 mb-1"><i class="fas fa-q text-blue-600 mr-1.5"></i>如何將本機暫存全部清空重新開始？</div>
+                        <p class="text-gray-600">點擊主頁頂部右上角的紅色<strong>「清除暫存」</strong>按鈕（<i class="fas fa-broom text-rose-600"></i>）並確認，系統就會清除全部歷史紀錄與本機多班級存檔，重置為乾淨的「神來一班」。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 底部返回主頁 CTA -->
+            <div class="text-center py-4">
+                <a href="index.html" class="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold px-6 py-3 rounded-full shadow-lg transition">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>立即返回「教室座位神管理系統 Pro」開始排位</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-3 mt-auto">
+        <div class="container mx-auto px-4 text-center text-xs">
+            <p>Copyright © Liyuchiutiger Gongminshen</p>
+        </div>
+    </footer>
+
+    <!-- 右下角可拖曳吉祥物 -->
+    <img id="mascot" src="image/LiyuChillGuy.svg" alt="Mascot" draggable="false">
+
+    <script>
+        (function () {
+            const liveDemoSec = document.getElementById('live-demo');
+            const demoCursor = document.getElementById('demoCursor');
+            const demoCursorLabel = document.getElementById('demoCursorLabel');
+            const stage = document.getElementById('demoStage');
+            const captionEl = document.getElementById('demoCaptionText');
+            const subHintEl = document.getElementById('demoSubHint');
+            const stepBadgeEl = document.getElementById('demoStepBadge');
+            const actionBar = document.getElementById('demoActionBar');
+            const progressFill = document.getElementById('demoProgressFill');
+            const autoBtn = document.getElementById('demoAutoBtn');
+            const prevBtn = document.getElementById('demoPrevBtn');
+            const nextBtn = document.getElementById('demoNextBtn');
+            const tabs = Array.from(document.querySelectorAll('.demo-scene-tab'));
+
+            const SCENE_DURATION = 5600;
+            let currentScene = 0;
+            let isAutoPlay = true;
+            let progressStart = Date.now();
+            let animTimers = [];
+
+            const clearTimers = () => {
+                animTimers.forEach(id => clearTimeout(id));
+                animTimers = [];
+                if (demoCursor) demoCursor.classList.remove('visible', 'clicking');
+            };
+            const schedule = (fn, ms) => {
+                const id = setTimeout(fn, ms);
+                animTimers.push(id);
+                return id;
+            };
+
+            // 模擬滑鼠移動至指定按鈕並執行按壓與波紋漣漪特效
+            const animateMouseClick = (targetEl, label, callback) => {
+                if (!targetEl || !liveDemoSec || !demoCursor) {
+                    if (callback) callback();
+                    return;
+                }
+                const secRect = liveDemoSec.getBoundingClientRect();
+                const btnRect = targetEl.getBoundingClientRect();
+                const x = (btnRect.left - secRect.left) + btnRect.width / 2;
+                const y = (btnRect.top - secRect.top) + btnRect.height / 2;
+
+                demoCursorLabel.textContent = label || '點擊操作';
+                demoCursor.classList.add('visible');
+                demoCursor.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+
+                schedule(() => {
+                    demoCursor.classList.add('clicking');
+                    const ripple = document.createElement('div');
+                    ripple.className = 'demo-cursor-ripple';
+                    ripple.style.left = `${Math.round(x)}px`;
+                    ripple.style.top = `${Math.round(y)}px`;
+                    liveDemoSec.appendChild(ripple);
+                    requestAnimationFrame(() => ripple.classList.add('expand'));
+                    setTimeout(() => ripple.remove(), 480);
+
+                    if (callback) callback();
+                    schedule(() => demoCursor.classList.remove('clicking'), 180);
+                }, 560);
+            };
+
+            const makeBtn = (icon, label, cls, onClick) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `px-2.5 py-1 rounded text-xs font-semibold transition shadow-sm flex items-center gap-1 ${cls}`;
+                btn.innerHTML = `<i class="fas ${icon}"></i><span>${label}</span>`;
+                btn.addEventListener('click', () => {
+                    if (isAutoPlay) setAutoPlay(false);
+                    onClick();
+                });
+                return btn;
+            };
+
+            // --------------------------------------------------
+            // 場景 0：快速匯入名單與前排優先標記
+            // --------------------------------------------------
+            function renderScene0() {
+                let showColor = true;
+                const sample = [
+                    { num: '1', name: '公小民', gender: 'male', needs: '需要提醒', front: false },
+                    { num: '2', name: '邱小瑜', gender: 'female', needs: '視力不好', front: true },
+                    { num: '3', name: '陳大德', gender: 'male', needs: '', front: false },
+                    { num: '4', name: '林美盛', gender: 'female', needs: '前排優先', front: true },
+                    { num: '5', name: '王小俐', gender: 'female', needs: '', front: false },
+                    { num: '6', name: '趙小傑', gender: 'male', needs: '', front: false }
+                ];
+
+                const draw = (placedCount) => {
+                    stage.innerHTML = `
+                        <div class="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-5 gap-3 items-center">
+                            <div class="sm:col-span-2 bg-slate-900 text-slate-100 rounded-lg p-3 text-[11px] font-mono leading-relaxed shadow-inner">
+                                <div class="text-cyan-300 text-[10px] mb-1.5 flex items-center justify-between">
+                                    <span><i class="fas fa-paste mr-1"></i>貼上 Excel 名單</span>
+                                    <span class="bg-teal-600 text-white px-1.5 py-0.5 rounded text-[9px]"><i class="fas fa-sync-alt mr-0.5"></i>已刷新</span>
+                                </div>
+                                ${sample.map((s, i) => `<div class="${i < placedCount ? 'text-emerald-300' : 'text-slate-400'}">${s.num} ${s.name} ${s.gender === 'male' ? '男' : '女'} ${s.needs}</div>`).join('')}
+                            </div>
+                            <div class="sm:col-span-3">
+                                <div class="w-2/3 mx-auto mb-2 py-1 rounded bg-stone-700 text-white text-center text-[11px] font-bold"><i class="fas fa-chalkboard mr-1"></i>黑板</div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    ${sample.map((s, i) => {
+                                        const visible = i < placedCount;
+                                        const colorCls = showColor ? s.gender : '';
+                                        return `
+                                            <div class="demo-desk ${visible ? colorCls : 'opacity-25 scale-90'} min-h-[66px] flex flex-col justify-center items-center">
+                                                ${visible && s.front ? '<span class="absolute top-1 left-1 text-[9px] bg-sky-100 text-sky-700 px-1 rounded font-bold"><i class="fas fa-eye mr-0.5"></i>前</span>' : ''}
+                                                <div class="text-xs font-bold text-slate-800">${visible ? `${s.num} ${s.name}` : '空位'} ${visible ? (s.gender === 'male' ? '<i class="fas fa-mars text-blue-500 text-[10px]"></i>' : '<i class="fas fa-venus text-pink-500 text-[10px]"></i>') : ''}</div>
+                                                ${visible && s.needs ? `<div class="text-[10px] text-slate-500 mt-0.5">${s.needs}</div>` : ''}
+                                            </div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const playAnim = () => {
+                    clearTimers();
+                    draw(0);
+                    sample.forEach((_, idx) => schedule(() => draw(idx + 1), 260 * (idx + 1)));
+                };
+
+                captionEl.textContent = '直接從 Excel / 試算表貼上名單，點擊刷新自動上座並識別「視力／前排優先」標記';
+                subHintEl.textContent = '支援空白、Tab、逗號分隔';
+                actionBar.innerHTML = '';
+                actionBar.append(
+                    makeBtn('fa-rotate-right', '重播入座動畫', 'bg-teal-600 hover:bg-teal-700 text-white', playAnim),
+                    makeBtn('fa-palette', '切換性別色塊', 'bg-white border border-slate-300 hover:bg-slate-100 text-slate-700', () => { showColor = !showColor; draw(sample.length); })
+                );
+                playAnim();
+            }
+
+            // --------------------------------------------------
+            // 場景 1：傳統矩陣 — 2-2 走道、鎖定與一鍵輪調
+            // --------------------------------------------------
+            function renderScene1() {
+                let lockedFirst = true;
+                let hasAisle = true;
+                // 3 列 x 2 行有效位（中間欄為走道）
+                let colsData = [
+                    [
+                        { num: '1', name: '王小明', gender: 'male' },
+                        { num: '3', name: '陳大德', gender: 'male' },
+                        { num: '5', name: '李大同', gender: 'male' }
+                    ],
+                    [
+                        { num: '2', name: '林小美', gender: 'female' },
+                        { num: '4', name: '張小華', gender: 'female' },
+                        { num: '6', name: '黃小玉', gender: 'female' }
+                    ]
+                ];
+
+                const draw = () => {
+                    const rowsHtml = [0, 1, 2].map(r => {
+                        const leftS = colsData[0][r];
+                        const rightS = colsData[1][r];
+                        const isLocked = lockedFirst && r === 0;
+                        return `
+                            <div class="demo-desk ${leftS.gender} ${isLocked ? 'locked' : ''} min-h-[60px] flex flex-col justify-center items-center">
+                                ${isLocked ? '<i class="fas fa-lock text-amber-500 text-[10px] absolute top-1 right-1.5"></i>' : ''}
+                                <div class="text-xs font-bold">${leftS.num} ${leftS.name}</div>
+                            </div>
+                            ${hasAisle ? '<div class="demo-desk disabled min-h-[60px] flex items-center justify-center text-[10px]"><i class="fas fa-road mr-1"></i>走道</div>' : ''}
+                            <div class="demo-desk ${rightS.gender} min-h-[60px] flex flex-col justify-center items-center">
+                                <div class="text-xs font-bold">${rightS.num} ${rightS.name}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    stage.innerHTML = `
+                        <div class="w-full max-w-md">
+                            <div class="w-3/4 mx-auto mb-2.5 py-1 rounded bg-stone-700 text-white text-center text-[11px] font-bold"><i class="fas fa-chalkboard mr-1"></i>黑板</div>
+                            <div class="grid ${hasAisle ? 'grid-cols-3' : 'grid-cols-2'} gap-2">${rowsHtml}</div>
+                        </div>
+                    `;
+                };
+
+                const rotateDown = () => {
+                    // 左行：若第 0 列鎖定，只輪調 index 1, 2
+                    if (lockedFirst) {
+                        const tmp = colsData[0][2];
+                        colsData[0][2] = colsData[0][1];
+                        colsData[0][1] = tmp;
+                    } else {
+                        colsData[0].unshift(colsData[0].pop());
+                    }
+                    colsData[1].unshift(colsData[1].pop());
+                    draw();
+                };
+
+                captionEl.textContent = '設定真實教室走道並鎖定 1 號同學，按下「整體往後移一列」時鎖定者原地不動、其餘安全輪調';
+                subHintEl.textContent = '每月換位一鍵完成';
+                const btnRotate = makeBtn('fa-arrow-down', '點我往後輪調一列', 'bg-sky-600 hover:bg-sky-700 text-white', rotateDown);
+                const btnLock = makeBtn('fa-lock', '切換 1 號鎖定', 'bg-amber-500 hover:bg-amber-600 text-white', () => { lockedFirst = !lockedFirst; draw(); });
+                const btnAisle = makeBtn('fa-road', '開關中間走道', 'bg-white border border-slate-300 hover:bg-slate-100 text-slate-700', () => { hasAisle = !hasAisle; draw(); });
+                actionBar.innerHTML = '';
+                actionBar.append(btnRotate, btnLock, btnAisle);
+
+                draw();
+                schedule(() => animateMouseClick(btnRotate, '點擊：往後輪調一列', rotateDown), 800);
+                schedule(() => animateMouseClick(btnRotate, '再次點擊輪調', rotateDown), 2700);
+            }
+
+            // --------------------------------------------------
+            // 場景 2：分組座位客製化（桌型、色盤、組長皇冠、旋轉、計分）
+            // --------------------------------------------------
+            function renderScene2() {
+                const colors = [
+                    { border: '#3b82f6', bg: '#eff6ff', name: '藍隊' },
+                    { border: '#10b981', bg: '#ecfdf5', name: '綠隊' },
+                    { border: '#f97316', bg: '#fff7ed', name: '橙隊' },
+                    { border: '#ec4899', bg: '#fdf2f8', name: '粉隊' }
+                ];
+                let colMode = 2; // 2 或 3 或 1
+                let colorIdx = 0;
+                let angle = 0;
+                let score = 2;
+
+                const members = [
+                    { num: '1', name: '王小明', gender: 'male', leader: true },
+                    { num: '2', name: '林小美', gender: 'female', leader: false },
+                    { num: '3', name: '陳大德', gender: 'male', leader: false },
+                    { num: '4', name: '張小華', gender: 'female', leader: false }
+                ];
+
+                const draw = () => {
+                    const c = colors[colorIdx];
+                    stage.innerHTML = `
+                        <div class="transition-all duration-500 rounded-xl p-3 shadow-md" style="border: 2.5px solid ${c.border}; background:${c.bg}; transform: rotate(${angle}deg);">
+                            <div class="flex items-center justify-between gap-3 bg-white/90 rounded px-2 py-1 mb-2 border border-slate-200 text-xs">
+                                <div class="flex items-center gap-1.5 font-bold text-slate-700">
+                                    <span>第 1 組 (${c.name})</span>
+                                    <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">4/4 <i class="fas fa-mars text-blue-500 ml-0.5"></i>2 <i class="fas fa-venus text-pink-500 ml-0.5"></i>2</span>
+                                </div>
+                                <div class="flex items-center gap-1 text-[10px] text-white">
+                                    <span class="w-4 h-4 rounded flex items-center justify-center" style="background:${c.border}"><i class="fas fa-palette"></i></span>
+                                    <span class="w-4 h-4 rounded bg-sky-600 flex items-center justify-center"><i class="fas fa-table-cells"></i></span>
+                                    <span class="w-4 h-4 rounded bg-violet-500 flex items-center justify-center"><i class="fas fa-rotate"></i></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-center gap-2 bg-amber-50 border border-amber-200 rounded py-0.5 px-2 mb-2 text-[11px] font-bold text-amber-800">
+                                <i class="fas fa-star text-amber-500"></i> 課堂積分：<span>${score}</span> 分
+                            </div>
+                            <div class="grid gap-1.5" style="grid-template-columns: repeat(${colMode}, minmax(84px, 1fr));">
+                                ${members.map(m => `
+                                    <div class="demo-desk ${m.gender} min-h-[58px] flex flex-col justify-center items-center">
+                                        ${m.leader ? '<span class="absolute top-1 left-1 text-[9px] bg-amber-100 text-amber-700 border border-amber-400 px-1 rounded font-bold"><i class="fas fa-crown mr-0.5"></i>組長</span>' : ''}
+                                        <div class="text-xs font-bold mt-2">${m.num} ${m.name}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                captionEl.textContent = '分組支援單組桌型切換、隊伍代表色、組長金色皇冠、整組旋轉角度與課堂積分板';
+                subHintEl.textContent = '合作學習與討論課神器';
+                const btnCols = makeBtn('fa-table-cells', '切換桌型欄數', 'bg-sky-600 hover:bg-sky-700 text-white', () => { colMode = colMode === 2 ? 4 : colMode === 4 ? 1 : 2; draw(); });
+                const btnColor = makeBtn('fa-palette', '換代表色', 'bg-emerald-600 hover:bg-emerald-700 text-white', () => { colorIdx = (colorIdx + 1) % colors.length; draw(); });
+                const btnRot = makeBtn('fa-rotate', '旋轉角度', 'bg-violet-600 hover:bg-violet-700 text-white', () => { angle = angle === 0 ? 12 : angle === 12 ? -12 : 0; draw(); });
+                const btnScore = makeBtn('fa-plus', '積分 +1', 'bg-amber-500 hover:bg-amber-600 text-white', () => { score++; draw(); });
+                actionBar.innerHTML = '';
+                actionBar.append(btnCols, btnColor, btnRot, btnScore);
+
+                draw();
+                schedule(() => animateMouseClick(btnColor, '點擊：換代表色', () => { colorIdx = 1; draw(); }), 700);
+                schedule(() => animateMouseClick(btnRot, '點擊：旋轉整組', () => { angle = 12; draw(); }), 2100);
+                schedule(() => animateMouseClick(btnScore, '點擊：積分 +1', () => { score++; draw(); }), 3500);
+            }
+
+            // --------------------------------------------------
+            // 場景 3：智慧排位 — 綁定同組、互斥避開與 S 型異質分組
+            // --------------------------------------------------
+            function renderScene3() {
+                let stateLabel = '排位前：互斥同學（陳大德 / 趙小傑）同組且必同組拆散';
+                let groups = [
+                    [
+                        { num: '1', name: '王小明', gender: 'male', tag: 'link' },
+                        { num: '3', name: '陳大德', gender: 'male', tag: 'ban' },
+                        { num: '7', name: '趙小傑', gender: 'male', tag: 'ban' }
+                    ],
+                    [
+                        { num: '2', name: '林小美', gender: 'female', tag: 'link' },
+                        { num: '4', name: '張小華', gender: 'female', tag: '' },
+                        { num: '6', name: '黃小玉', gender: 'female', tag: '' }
+                    ]
+                ];
+
+                const draw = () => {
+                    stage.innerHTML = `
+                        <div class="w-full max-w-xl space-y-2.5">
+                            <div class="flex flex-wrap justify-center gap-2 text-[11px]">
+                                <span class="badge-pill bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-link"></i>綁定同組：王小明 + 林小美</span>
+                                <span class="badge-pill bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-ban"></i>互斥避免同組：陳大德 / 趙小傑</span>
+                            </div>
+                            <div class="text-center text-xs font-bold text-indigo-700">${stateLabel}</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                ${groups.map((g, gi) => `
+                                    <div class="rounded-lg border-2 ${gi === 0 ? 'border-blue-300 bg-blue-50/50' : 'border-purple-300 bg-purple-50/50'} p-2.5">
+                                        <div class="text-xs font-bold text-slate-700 mb-1.5">第 ${gi + 1} 組</div>
+                                        <div class="grid grid-cols-3 gap-1.5">
+                                            ${g.map(s => `
+                                                <div class="demo-desk ${s.gender} min-h-[56px] flex flex-col justify-center items-center">
+                                                    ${s.tag === 'link' ? '<span class="absolute top-0.5 left-1 text-[9px] text-emerald-600"><i class="fas fa-link"></i></span>' : ''}
+                                                    ${s.tag === 'ban' ? '<span class="absolute top-0.5 left-1 text-[9px] text-rose-500"><i class="fas fa-ban"></i></span>' : ''}
+                                                    <div class="text-[11px] font-bold">${s.num} ${s.name}</div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const runSmart = () => {
+                    stateLabel = '智慧排位完成：綁定同組已相聚、互斥名單已分組且男女均衡！';
+                    groups = [
+                        [
+                            { num: '1', name: '王小明', gender: 'male', tag: 'link' },
+                            { num: '2', name: '林小美', gender: 'female', tag: 'link' },
+                            { num: '3', name: '陳大德', gender: 'male', tag: 'ban' }
+                        ],
+                        [
+                            { num: '7', name: '趙小傑', gender: 'male', tag: 'ban' },
+                            { num: '4', name: '張小華', gender: 'female', tag: '' },
+                            { num: '6', name: '黃小玉', gender: 'female', tag: '' }
+                        ]
+                    ];
+                    draw();
+                };
+
+                captionEl.textContent = '設定「綁定同組」與「互斥名單」後執行智慧排位，演算法自動滿足條件並兼顧男女均衡或 S 型異質分組';
+                subHintEl.textContent = '自動啟發式避開衝突';
+                const btnSmart = makeBtn('fa-wand-magic-sparkles', '點我執行智慧排位', 'bg-purple-600 hover:bg-purple-700 text-white', runSmart);
+                actionBar.innerHTML = '';
+                actionBar.append(btnSmart);
+
+                draw();
+                schedule(() => animateMouseClick(btnSmart, '點擊：執行智慧排位', runSmart), 1100);
+            }
+
+            // --------------------------------------------------
+            // 場景 4：自由畫布 — 彈性陣型切換與框選群組公轉
+            // --------------------------------------------------
+            function renderScene4() {
+                const presets = {
+                    chevron: [
+                        { x: 55, y: 40, a: 18 }, { x: 165, y: 58, a: 18 }, { x: 315, y: 58, a: -18 }, { x: 425, y: 40, a: -18 },
+                        { x: 55, y: 145, a: 18 }, { x: 165, y: 163, a: 18 }, { x: 315, y: 163, a: -18 }, { x: 425, y: 145, a: -18 }
+                    ],
+                    arc: [
+                        { x: 90, y: 80, a: 28 }, { x: 195, y: 52, a: 10 }, { x: 300, y: 52, a: -10 }, { x: 405, y: 80, a: -28 },
+                        { x: 65, y: 182, a: 32 }, { x: 185, y: 152, a: 12 }, { x: 310, y: 152, a: -12 }, { x: 430, y: 182, a: -32 }
+                    ],
+                    circle: [
+                        { x: 245, y: 24, a: 0 }, { x: 365, y: 56, a: 45 }, { x: 410, y: 132, a: 90 }, { x: 365, y: 206, a: 135 },
+                        { x: 245, y: 230, a: 180 }, { x: 125, y: 206, a: -135 }, { x: 80, y: 132, a: -90 }, { x: 125, y: 56, a: -45 }
+                    ]
+                };
+
+                let desks = JSON.parse(JSON.stringify(presets.chevron));
+                let selectedIndices = [];
+                let showMarquee = false;
+                let boundGroup = false;
+                const names = ['1 王小明', '2 林小美', '3 陳大德', '4 張小華', '5 李大同', '6 黃小玉', '7 趙小傑', '8 吳小婷'];
+
+                const draw = () => {
+                    stage.innerHTML = `
+                        <div class="relative w-full max-w-[560px] h-[285px] bg-white/80 rounded-lg border border-purple-200 overflow-hidden mx-auto">
+                            ${boundGroup ? '<div style="position:absolute;left:34px;top:16px;width:242px;height:226px;border:2px dashed #10b981;background:rgba(236,253,245,0.72);border-radius:12px;z-index:2;"><div style="position:absolute;top:4px;left:8px;right:8px;display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;color:#065f46;"><span class="bg-white/90 px-2 py-0.5 rounded-full border border-emerald-200">第 1 組 (4/4)</span><span class="bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded-full border border-amber-200"><i class="fas fa-star text-amber-500 mr-0.5"></i>積分 2 分</span></div></div>' : ''}
+                            ${showMarquee ? '<div class="demo-marquee" style="left:36px;top:24px;width:236px;height:210px;"></div>' : ''}
+                            ${desks.map((d, i) => `
+                                <div class="demo-desk ${i % 2 === 0 ? 'male' : 'female'} ${selectedIndices.includes(i) ? 'selected' : ''}"
+                                     style="position:absolute;left:${d.x}px;top:${d.y}px;width:88px;height:54px;display:flex;align-items:center;justify-content:center;transform:rotate(${d.a}deg);z-index:10;">
+                                    <span class="text-[11px] font-bold">${names[i]}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                };
+
+                const setPreset = (key) => {
+                    showMarquee = false;
+                    boundGroup = false;
+                    selectedIndices = [];
+                    desks = JSON.parse(JSON.stringify(presets[key]));
+                    draw();
+                };
+
+                const bindLeftGroup = () => {
+                    showMarquee = false;
+                    selectedIndices = [0, 1, 4, 5];
+                    boundGroup = true;
+                    draw();
+                };
+
+                const orbitLeftGroup = () => {
+                    showMarquee = !boundGroup;
+                    selectedIndices = [0, 1, 4, 5];
+                    const cx = selectedIndices.reduce((s, i) => s + desks[i].x, 0) / selectedIndices.length;
+                    const cy = selectedIndices.reduce((s, i) => s + desks[i].y, 0) / selectedIndices.length;
+                    const rad = (15 * Math.PI) / 180;
+                    const cos = Math.cos(rad), sin = Math.sin(rad);
+                    selectedIndices.forEach(i => {
+                        const rx = desks[i].x - cx, ry = desks[i].y - cy;
+                        desks[i].x = Math.round(cx + rx * cos - ry * sin);
+                        desks[i].y = Math.round(cy + rx * sin + ry * cos);
+                        desks[i].a = desks[i].a + 15;
+                    });
+                    draw();
+                };
+
+                captionEl.textContent = '自由畫布內建 8 大陣型，框選多桌可「綁定為小組」享計分板與抽組，並支援整群公轉旋轉';
+                subHintEl.textContent = '彈性格局 + 分組功能一次擁有';
+                const btnChev = makeBtn('fa-angles-up', '魚骨斜角', 'bg-white border border-purple-300 hover:bg-purple-50 text-purple-800', () => setPreset('chevron'));
+                const btnArc = makeBtn('fa-circle-half-stroke', '圓弧扇形', 'bg-white border border-purple-300 hover:bg-purple-50 text-purple-800', () => setPreset('arc'));
+                const btnBind = makeBtn('fa-object-group', '綁定左群為小組', 'bg-emerald-600 hover:bg-emerald-700 text-white', bindLeftGroup);
+                const btnOrbit = makeBtn('fa-rotate-right', '整群公轉 +15°', 'bg-blue-600 hover:bg-blue-700 text-white', orbitLeftGroup);
+                actionBar.innerHTML = '';
+                actionBar.append(btnChev, btnArc, btnBind, btnOrbit);
+
+                draw();
+                schedule(() => animateMouseClick(btnBind, '點擊：綁定為小組', bindLeftGroup), 900);
+                schedule(() => animateMouseClick(btnOrbit, '點擊：整群公轉 +15°', orbitLeftGroup), 2700);
+            }
+
+            // --------------------------------------------------
+            // 場景 5：課堂互動 — 搜尋高亮、門窗隨視角翻轉與隨機點人
+            // --------------------------------------------------
+            function renderScene5() {
+                let flipped = false;
+                let searchHit = -1;
+                let pickerHit = -1;
+                const list = [
+                    { num: '1', name: '王小明', gender: 'male' },
+                    { num: '2', name: '林小美', gender: 'female' },
+                    { num: '3', name: '陳大德', gender: 'male' },
+                    { num: '4', name: '張小華', gender: 'female' },
+                    { num: '5', name: '李大同', gender: 'male' },
+                    { num: '6', name: '黃小玉', gender: 'female' }
+                ];
+
+                const draw = () => {
+                    const ordered = flipped ? [...list].reverse() : list;
+                    const bb = '<div class="w-2/3 mx-auto py-1 rounded bg-stone-700 text-white text-center text-[11px] font-bold"><i class="fas fa-chalkboard mr-1"></i>黑板</div>';
+                    stage.innerHTML = `
+                        <div class="w-full max-w-lg space-y-2">
+                            ${!flipped ? bb : ''}
+                            <div class="flex items-stretch gap-2">
+                                <div class="flex flex-col justify-between text-[10px] font-bold">
+                                    <span class="px-1.5 py-2 rounded ${flipped ? 'bg-sky-100 text-sky-800 border border-sky-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">${flipped ? '靠窗' : '前門'}</span>
+                                    <span class="px-1.5 py-2 rounded ${flipped ? 'bg-sky-100 text-sky-800 border border-sky-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">${flipped ? '靠窗' : '後門'}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 flex-1">
+                                    ${ordered.map(s => {
+                                        const origIdx = list.indexOf(s);
+                                        const cls = origIdx === pickerHit ? 'picker-hit' : origIdx === searchHit ? 'highlight' : '';
+                                        return `<div class="demo-desk ${s.gender} ${cls} min-h-[60px] flex flex-col justify-center items-center">
+                                            <div class="text-xs font-bold">${s.num} ${s.name}</div>
+                                            ${origIdx === pickerHit ? '<span class="text-[9px] text-pink-600 font-bold mt-0.5"><i class="fas fa-trophy mr-0.5"></i>抽中！</span>' : ''}
+                                        </div>`;
+                                    }).join('')}
+                                </div>
+                                <div class="flex flex-col justify-between text-[10px] font-bold">
+                                    <span class="px-1.5 py-2 rounded ${flipped ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-sky-100 text-sky-800 border border-sky-300'}">${flipped ? '後門' : '靠窗'}</span>
+                                    <span class="px-1.5 py-2 rounded ${flipped ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-sky-100 text-sky-800 border border-sky-300'}">${flipped ? '前門' : '靠窗'}</span>
+                                </div>
+                            </div>
+                            ${flipped ? bb : ''}
+                        </div>
+                    `;
+                };
+
+                const runPick = () => {
+                    searchHit = -1;
+                    let steps = 0;
+                    const step = () => {
+                        pickerHit = Math.floor(Math.random() * list.length);
+                        draw();
+                        steps++;
+                        if (steps < 8) schedule(step, 110);
+                    };
+                    step();
+                };
+
+                captionEl.textContent = '切換「黑板在上 ⇄ 黑板在下（講臺視角）」時門窗自動左右翻轉，並支援搜尋高亮與跑馬燈隨機點人';
+                subHintEl.textContent = '上課點名零冷場';
+                const btnSearch = makeBtn('fa-search', '搜尋林小美', 'bg-amber-500 hover:bg-amber-600 text-white', () => { pickerHit = -1; searchHit = 1; draw(); });
+                const btnFlip = makeBtn('fa-sync-alt', '翻轉視角與門窗', 'bg-orange-500 hover:bg-orange-600 text-white', () => { flipped = !flipped; draw(); });
+                const btnPick = makeBtn('fa-dice', '點我隨機點人', 'bg-pink-600 hover:bg-pink-700 text-white', runPick);
+                actionBar.innerHTML = '';
+                actionBar.append(btnSearch, btnFlip, btnPick);
+
+                draw();
+                schedule(() => animateMouseClick(btnFlip, '點擊：翻轉視角', () => { flipped = true; draw(); }), 900);
+                schedule(() => animateMouseClick(btnPick, '點擊：隨機點人', runPick), 2500);
+            }
+
+            // --------------------------------------------------
+            // 場景 6：匿名遮罩與 PNG / SVG / Word 多格式匯出
+            // --------------------------------------------------
+            function renderScene6() {
+                let anon = false;
+                const draw = () => {
+                    const n1 = anon ? '王O明' : '王小明';
+                    const n2 = anon ? '林O美' : '林小美';
+                    stage.innerHTML = `
+                        <div class="w-full max-w-xl space-y-3">
+                            <div class="flex justify-center gap-3">
+                                <div class="demo-desk male min-w-[110px] min-h-[60px] flex flex-col justify-center items-center">
+                                    <div class="text-xs font-bold">1 ${n1} <i class="fas fa-mars text-blue-500 text-[10px]"></i></div>
+                                    <div class="text-[10px] text-slate-500">需要提醒</div>
+                                </div>
+                                <div class="demo-desk female min-w-[110px] min-h-[60px] flex flex-col justify-center items-center">
+                                    <div class="text-xs font-bold">2 ${n2} <i class="fas fa-venus text-pink-500 text-[10px]"></i></div>
+                                    <div class="text-[10px] text-slate-500">視力不好</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2.5 text-center">
+                                <div class="bg-white rounded-lg p-2.5 border border-indigo-200 shadow-sm">
+                                    <i class="fas fa-image text-indigo-600 text-lg mb-1"></i>
+                                    <div class="text-xs font-bold text-indigo-900">PNG 高畫質圖</div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">2倍解析・文字零裁切</div>
+                                </div>
+                                <div class="bg-white rounded-lg p-2.5 border border-cyan-200 shadow-sm">
+                                    <i class="fas fa-bezier-curve text-cyan-600 text-lg mb-1"></i>
+                                    <div class="text-xs font-bold text-cyan-900">SVG 向量圖檔</div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">無限放大・印刷不失真</div>
+                                </div>
+                                <div class="bg-white rounded-lg p-2.5 border border-blue-200 shadow-sm">
+                                    <i class="fas fa-file-word text-blue-600 text-lg mb-1"></i>
+                                    <div class="text-xs font-bold text-blue-900">Word (.docx)</div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">自由畫布直嵌平面圖</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                captionEl.textContent = '一鍵開啟「匿名（中間 O）」保護個資，支援匯出高畫質 PNG、無限放大 SVG 向量圖與 Word 文件';
+                subHintEl.textContent = '所見即所得・印表張貼超清晰';
+                const btnAnon = makeBtn('fa-user-secret', '切換匿名遮罩 (中間O)', 'bg-slate-700 hover:bg-slate-800 text-white', () => { anon = !anon; draw(); });
+                actionBar.innerHTML = '';
+                actionBar.append(btnAnon);
+
+                draw();
+                schedule(() => animateMouseClick(btnAnon, '點擊：開啟匿名', () => { anon = true; draw(); }), 1000);
+                schedule(() => animateMouseClick(btnAnon, '點擊：恢復原名', () => { anon = false; draw(); }), 3000);
+            }
+
+            const scenes = [renderScene0, renderScene1, renderScene2, renderScene3, renderScene4, renderScene5, renderScene6];
+
+            function goToScene(index) {
+                clearTimers();
+                currentScene = (index + scenes.length) % scenes.length;
+                progressStart = Date.now();
+                progressFill.style.width = '0%';
+                stepBadgeEl.textContent = `${currentScene + 1} / ${scenes.length}`;
+                tabs.forEach((t, idx) => t.classList.toggle('active', idx === currentScene));
+                scenes[currentScene]();
+            }
+
+            function setAutoPlay(val) {
+                isAutoPlay = val;
+                progressStart = Date.now();
+                autoBtn.innerHTML = isAutoPlay
+                    ? '<i class="fas fa-pause"></i><span>暫停導覽</span>'
+                    : '<i class="fas fa-play"></i><span>繼續播放</span>';
+                autoBtn.classList.toggle('bg-blue-600', isAutoPlay);
+                autoBtn.classList.toggle('bg-emerald-600', !isAutoPlay);
+            }
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    goToScene(parseInt(tab.dataset.scene, 10));
+                });
+            });
+            prevBtn.addEventListener('click', () => goToScene(currentScene - 1));
+            nextBtn.addEventListener('click', () => goToScene(currentScene + 1));
+            autoBtn.addEventListener('click', () => setAutoPlay(!isAutoPlay));
+
+            // 進度條與自動輪播循環
+            setInterval(() => {
+                if (!isAutoPlay) return;
+                const elapsed = Date.now() - progressStart;
+                const pct = Math.min(100, (elapsed / SCENE_DURATION) * 100);
+                progressFill.style.width = `${pct}%`;
+                if (elapsed >= SCENE_DURATION) {
+                    goToScene(currentScene + 1);
+                }
+            }, 120);
+
+            // 左側目錄捲動高亮
+            const tocLinks = Array.from(document.querySelectorAll('.toc-link'));
+            const sections = tocLinks.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+            if ('IntersectionObserver' in window && sections.length > 0) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === `#${entry.target.id}`));
+                        }
+                    });
+                }, { rootMargin: '-20% 0px -65% 0px' });
+                sections.forEach(sec => observer.observe(sec));
+            }
+
+            // 右下角吉祥物自由拖曳與點擊粒子特效
+            (function initMascotDrag() {
+                const mascot = document.getElementById('mascot');
+                if (!mascot) return;
+                let isDown = false, hasMoved = false, startX = 0, startY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+
+                mascot.addEventListener('pointerdown', (e) => {
+                    isDown = true; hasMoved = false;
+                    startX = e.clientX; startY = e.clientY;
+                    initialX = e.clientX - xOffset; initialY = e.clientY - yOffset;
+                    mascot.setPointerCapture(e.pointerId);
+                });
+                mascot.addEventListener('pointermove', (e) => {
+                    if (!isDown) return;
+                    if (!hasMoved && Math.hypot(e.clientX - startX, e.clientY - startY) > 5) hasMoved = true;
+                    if (hasMoved) {
+                        e.preventDefault();
+                        xOffset = e.clientX - initialX; yOffset = e.clientY - initialY;
+                        mascot.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                    }
+                });
+                const endDrag = (e) => {
+                    if (!isDown) return;
+                    isDown = false;
+                    if (mascot.hasPointerCapture(e.pointerId)) mascot.releasePointerCapture(e.pointerId);
+                    if (!hasMoved) {
+                        for (let i = 0; i < 15; i++) {
+                            const p = document.createElement('div');
+                            p.className = 'particle';
+                            p.style.backgroundColor = `hsl(${Math.random() * 360}, 78%, 55%)`;
+                            p.style.left = `${e.clientX}px`;
+                            p.style.top = `${e.clientY}px`;
+                            document.body.appendChild(p);
+                            const angle = Math.random() * Math.PI * 2;
+                            const vel = Math.random() * 100 + 45;
+                            requestAnimationFrame(() => {
+                                p.style.transform = `translate(${Math.cos(angle) * vel}px, ${Math.sin(angle) * vel}px) scale(0)`;
+                                p.style.opacity = '0';
+                            });
+                            setTimeout(() => p.remove(), 1000);
+                        }
+                    }
+                };
+                mascot.addEventListener('pointerup', endDrag);
+                mascot.addEventListener('pointercancel', endDrag);
+            })();
+
+            goToScene(0);
+        })();
+    </script>
+</body>
+</html>
